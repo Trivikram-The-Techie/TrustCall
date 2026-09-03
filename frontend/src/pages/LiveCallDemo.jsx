@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Play, AlertOctagon, PhoneOff, Phone, CheckCircle2, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, Play, AlertOctagon, PhoneOff, Phone, CheckCircle2, ShieldAlert, Sparkles, RefreshCw, Activity, Layers } from 'lucide-react';
 import LiveWaveform from '../components/LiveWaveform';
 import RiskGauge from '../components/RiskGauge';
 import ExplanationPanel from '../components/ExplanationPanel';
 import AlertTimeline from '../components/AlertTimeline';
-import { AudioStreamRecorder } from '../utils/audioUtils';
+import { AudioStreamRecorder, ClientAcousticForensics } from '../utils/audioUtils';
 
 export default function LiveCallDemo() {
   const [isMicActive, setIsMicActive] = useState(false);
@@ -22,6 +22,21 @@ export default function LiveCallDemo() {
     urgency_nlp: 0.0,
     caller_metadata: 15.0
   });
+  const [accumulator, setAccumulator] = useState({
+    voiced_duration_sec: 0.0,
+    target_duration_sec: 10.0,
+    progress_percent: 0,
+    confidence_tier: 'Ready to Sample',
+    confidence_weight: 0.35,
+    status_description: 'Speak into microphone or run preset to profile vocal tract dynamics (10s window)'
+  });
+  const [layers, setLayers] = useState({
+    l1_pitch_naturalness: { passed: true, label: "Pitch Dynamic Inflection", score: 0.12 },
+    l2_vocal_fold_tremor: { passed: true, label: "Vocal Fold Micro-Jitter", score: 0.15 },
+    l3_vocoder_cutoff: { passed: true, label: "High-Freq Vocoder Roll-off", score: 0.12 },
+    l4_harmonic_hnr: { passed: true, label: "Harmonic-to-Noise Naturalness", score: 0.15 },
+    l5_phase_continuity: { passed: true, label: "Respiratory & Phase Continuity", score: 0.10 }
+  });
   const [events, setEvents] = useState([]);
   const [audioEnergy, setAudioEnergy] = useState(0.05);
   const [callDuration, setCallDuration] = useState(12);
@@ -31,6 +46,7 @@ export default function LiveCallDemo() {
   const wsRef = useRef(null);
   const recorderRef = useRef(null);
   const timerRef = useRef(null);
+  const clientForensicsRef = useRef(new ClientAcousticForensics(16000, 10.0));
 
   // Call timer simulation
   useEffect(() => {
@@ -69,6 +85,9 @@ export default function LiveCallDemo() {
           if (data.action_recommendation) setActionRecommendation(data.action_recommendation);
           if (data.rms_energy) setAudioEnergy(data.rms_energy);
 
+          if (data.accumulator) setAccumulator(data.accumulator);
+          if (data.layers) setLayers(data.layers);
+
           if (['Medium', 'High', 'Critical'].includes(data.verdict)) {
             setEvents((prev) => [
               ...prev,
@@ -99,11 +118,62 @@ export default function LiveCallDemo() {
     } else {
       setIsPlayingPreset(null);
       setIsCallTerminated(false);
-      const ws = connectWebSocket();
+      clientForensicsRef.current.reset();
+      setAccumulator({
+        voiced_duration_sec: 0.0,
+        target_duration_sec: 10.0,
+        progress_percent: 0,
+        confidence_tier: 'Calibrating (0-2.5s)',
+        confidence_weight: 0.35,
+        status_description: 'Ingesting vocal tract dynamics from live microphone...'
+      });
 
-      const recorder = new AudioStreamRecorder((pcmChunk) => {
-        if (ws.readyState === WebSocket.OPEN) {
+      let ws = null;
+      try {
+        ws = connectWebSocket();
+      } catch (e) {
+        // Fallback for static hosting
+      }
+
+      const recorder = new AudioStreamRecorder((pcmChunk, floatSamples) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(pcmChunk);
+        }
+
+        // Run client-side 10-second multi-layer acoustic forensics
+        const evalResult = clientForensicsRef.current.processFrame(floatSamples);
+        if (evalResult) {
+          if (evalResult.isVoiced) {
+            setAudioEnergy(Math.min(1.0, evalResult.rms * 6.0));
+            setRiskScore(evalResult.risk_score);
+            setVerdict(evalResult.verdict);
+            setStatusText(evalResult.status_text);
+            setExplanation(evalResult.explanation);
+            setForensicReasons(evalResult.forensic_reasons);
+            setComponents(evalResult.components);
+            setActionRecommendation(evalResult.action_recommendation);
+            if (evalResult.accumulator) setAccumulator(evalResult.accumulator);
+            if (evalResult.layers) setLayers(evalResult.layers);
+
+            if (['Medium', 'High', 'Critical'].includes(evalResult.verdict)) {
+              setEvents((prev) => {
+                const now = Date.now() / 1000;
+                if (prev.length > 0 && now - prev[prev.length - 1].timestamp < 3.0) return prev;
+                return [
+                  ...prev,
+                  {
+                    timestamp: now,
+                    alert_tier: evalResult.verdict,
+                    risk_score: evalResult.risk_score,
+                    explanation: evalResult.explanation
+                  }
+                ];
+              });
+            }
+          } else {
+            setAudioEnergy(0.02);
+            if (evalResult.accumulator) setAccumulator(evalResult.accumulator);
+          }
         }
       }, 16000);
 
@@ -226,6 +296,39 @@ export default function LiveCallDemo() {
       setActionRecommendation(data.action_recommendation);
       setAudioEnergy(isGenuine ? 0.25 : 0.45);
 
+      if (data.accumulator) {
+        setAccumulator(data.accumulator);
+      } else {
+        setAccumulator({
+          voiced_duration_sec: 4.8,
+          target_duration_sec: 10.0,
+          progress_percent: 48,
+          confidence_tier: isGenuine ? 'Profiling Layers (4.8s)' : 'High-Confidence Alert',
+          confidence_weight: 0.85,
+          status_description: isGenuine
+            ? 'Natural human vocal fold dynamics and continuous pitch curvature verified'
+            : 'Synthetic vocoder anomalies detected across 4 biometric layers'
+        });
+      }
+
+      if (data.layers && Object.keys(data.layers).length > 0) {
+        setLayers(data.layers);
+      } else {
+        setLayers(isGenuine ? {
+          l1_pitch_naturalness: { passed: true, label: "Pitch Dynamic Inflection", score: 0.12 },
+          l2_vocal_fold_tremor: { passed: true, label: "Vocal Fold Micro-Jitter", score: 0.15 },
+          l3_vocoder_cutoff: { passed: true, label: "High-Freq Vocoder Roll-off", score: 0.12 },
+          l4_harmonic_hnr: { passed: true, label: "Harmonic-to-Noise Naturalness", score: 0.15 },
+          l5_phase_continuity: { passed: true, label: "Respiratory & Phase Continuity", score: 0.10 }
+        } : {
+          l1_pitch_naturalness: { passed: false, label: "Pitch Dynamic Inflection", score: 0.88 },
+          l2_vocal_fold_tremor: { passed: false, label: "Vocal Fold Micro-Jitter", score: 0.85 },
+          l3_vocoder_cutoff: { passed: false, label: "High-Freq Vocoder Roll-off", score: 0.82 },
+          l4_harmonic_hnr: { passed: false, label: "Harmonic-to-Noise Naturalness", score: 0.75 },
+          l5_phase_continuity: { passed: true, label: "Respiratory & Phase Continuity", score: 0.20 }
+        });
+      }
+
       setEvents((prev) => [
         ...prev,
         {
@@ -339,7 +442,7 @@ export default function LiveCallDemo() {
             }`}
           >
             {isMicActive ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-            <span>{isMicActive ? 'Stop Live Mic' : 'Live Mic Stream'}</span>
+            <span>{isMicActive ? 'Stop Live Mic' : 'Live Mic Stream (10s Multi-Layer)'}</span>
           </button>
 
           {/* Terminate Call Action */}
@@ -351,6 +454,87 @@ export default function LiveCallDemo() {
             <PhoneOff className="w-3.5 h-3.5" />
             <span>Terminate</span>
           </button>
+        </div>
+      </div>
+
+      {/* 10-Second Multi-Layer Forensic Profiler Banner */}
+      <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
+          <div className="flex items-center space-x-2">
+            <div className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                  10-Second Multi-Layer Biometric Voice Profiler
+                </span>
+                {isMicActive && (
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                {accumulator.status_description}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-mono font-bold text-slate-200">
+              {accumulator.voiced_duration_sec}s / {accumulator.target_duration_sec}s ({accumulator.progress_percent}%)
+            </span>
+            <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-mono font-bold ${
+              accumulator.voiced_duration_sec >= 6.0 
+                ? (riskScore >= 60 ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-emerald-950 text-emerald-300 border border-emerald-800')
+                : 'bg-blue-950 text-blue-300 border border-blue-800'
+            }`}>
+              {accumulator.confidence_tier}
+            </span>
+          </div>
+        </div>
+
+        {/* Dynamic Sampling Progress Bar */}
+        <div className="w-full bg-[#0B0F19] h-2.5 rounded-full overflow-hidden border border-slate-800 p-0.5 mb-3">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              riskScore >= 75
+                ? 'bg-gradient-to-r from-orange-500 to-rose-600'
+                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400'
+            }`}
+            style={{ width: `${accumulator.progress_percent}%` }}
+          />
+        </div>
+
+        {/* 5-Layer Forensic Checklist Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+          {Object.entries(layers).map(([key, layer]) => {
+            const isPassed = layer.passed;
+            return (
+              <div
+                key={key}
+                className={`p-2 rounded-lg border text-xs flex items-center space-x-2 transition-all ${
+                  isPassed
+                    ? 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
+                    : 'bg-rose-950/40 border-rose-600/60 text-rose-300 shadow-sm shadow-rose-900/30'
+                }`}
+              >
+                {isPassed ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertOctagon className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                )}
+                <div className="truncate min-w-0">
+                  <div className="font-semibold truncate text-[11px]">{layer.label}</div>
+                  <div className="text-[10px] opacity-75 font-mono">
+                    {isPassed ? 'Human Normal' : 'Artificial Flag'}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

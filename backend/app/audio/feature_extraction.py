@@ -306,9 +306,93 @@ def extract_spectral_flux_and_discontinuity(audio: np.ndarray, sr: int = 16000) 
     }
 
 
+def extract_high_freq_vocoder_metrics(audio: np.ndarray, sr: int = 16000) -> dict:
+    """
+    Detects neural vocoder high-frequency artifacts:
+    - Brickwall cutoff above 7.0 - 7.5 kHz (common in 22.05/24kHz trained TTS models)
+    - Sub-band harmonic ripple and phase dispersion in the 6 - 8 kHz region.
+    """
+    if len(audio) < 512:
+        return {"vocoder_cutoff_detected": False, "high_freq_ratio": 0.15, "vocoder_layer_score": 0.1}
+
+    fft_vals = np.abs(rfft(audio * np.hanning(len(audio))))
+    freqs = rfftfreq(len(audio), 1.0 / sr)
+
+    # Energy bands
+    mid_band = (freqs >= 2000) & (freqs <= 5000)
+    high_band = (freqs >= 6500) & (freqs <= 7800)
+
+    mid_energy = np.mean(fft_vals[mid_band] ** 2) if np.any(mid_band) else 1e-6
+    high_energy = np.mean(fft_vals[high_band] ** 2) if np.any(high_band) else 1e-6
+
+    # Ratio of high to mid energy
+    hf_ratio = float(high_energy / (mid_energy + 1e-6))
+    
+    # Abnormal conditions:
+    # 1. Extreme brickwall drop: high energy drops by > 35dB relative to mid (typical of TTS cutoff)
+    # 2. Elevated vocoder buzz: high energy has unnatural harmonic resonance peaks (hf_ratio > 0.35)
+    is_brickwall = hf_ratio < 0.0008
+    is_vocoder_buzz = hf_ratio > 0.35
+    
+    if is_brickwall:
+        score = 0.85  # Strong synthetic tell (band-limited neural generation)
+    elif is_vocoder_buzz:
+        score = 0.80  # Neural vocoder artifact
+    else:
+        score = 0.15  # Natural human spectral slope
+        
+    return {
+        "vocoder_cutoff_detected": bool(is_brickwall or is_vocoder_buzz),
+        "high_freq_ratio": round(hf_ratio, 5),
+        "vocoder_layer_score": round(score, 3)
+    }
+
+
+def extract_harmonic_to_noise_ratio(audio: np.ndarray, sr: int = 16000) -> dict:
+    """
+    Estimates Harmonic-to-Noise Ratio (HNR).
+    Natural human voiced phonemes have dynamic HNR (12 - 25 dB) with micro-variations.
+    Artificial voices frequently have mathematically rigid HNR or phase-smearing noise.
+    """
+    if len(audio) < 1024:
+        return {"hnr_db": 15.0, "hnr_anomaly_score": 0.2}
+
+    corr = np.correlate(audio, audio, mode='full')
+    corr = corr[len(corr)//2:]
+    
+    min_lag = int(sr / 400.0)
+    max_lag = int(sr / 65.0)
+    
+    if len(corr) <= max_lag:
+        return {"hnr_db": 15.0, "hnr_anomaly_score": 0.2}
+
+    peak_lag = np.argmax(corr[min_lag:max_lag]) + min_lag
+    peak_val = corr[peak_lag]
+    zero_val = corr[0]
+    
+    if peak_val <= 0 or zero_val <= peak_val:
+        return {"hnr_db": 12.0, "hnr_anomaly_score": 0.3}
+
+    # HNR = 10 * log10(R(T) / (R(0) - R(T)))
+    noise_energy = max(1e-6, zero_val - peak_val)
+    hnr = 10.0 * np.log10(peak_val / noise_energy)
+    hnr = float(np.clip(hnr, -5.0, 35.0))
+
+    # Anomaly condition: unnaturally low HNR for voiced frame (<6dB) or unrealistically high (>30dB)
+    if hnr > 30.0 or hnr < 6.0:
+        hnr_anomaly = 0.75
+    else:
+        hnr_anomaly = 0.15
+
+    return {
+        "hnr_db": round(hnr, 2),
+        "hnr_anomaly_score": round(hnr_anomaly, 3)
+    }
+
+
 def extract_acoustic_features(audio: np.ndarray, sr: int = 16000) -> dict:
     """
-    Extracts all classical and prosodic anti-spoofing features into a unified dictionary.
+    Extracts all 5 forensic layers of acoustic and prosodic anti-spoofing features.
     """
     if len(audio) == 0:
         return {
@@ -317,7 +401,10 @@ def extract_acoustic_features(audio: np.ndarray, sr: int = 16000) -> dict:
             "perturbation": {"jitter_percent": 0.0, "shimmer_percent": 0.0, "jitter_anomaly": 0.0},
             "spectral_flatness": 0.0,
             "discontinuity": {"discontinuity_detected": False, "discontinuity_score": 0.0},
-            "prosodic_spoof_score": 0.0
+            "vocoder_metrics": {"vocoder_cutoff_detected": False, "vocoder_layer_score": 0.0},
+            "hnr": {"hnr_db": 0.0, "hnr_anomaly_score": 0.0},
+            "prosodic_spoof_score": 0.0,
+            "layers": {}
         }
 
     rms_energy = float(np.sqrt(np.mean(audio ** 2)))
@@ -325,13 +412,46 @@ def extract_acoustic_features(audio: np.ndarray, sr: int = 16000) -> dict:
     perturb_data = extract_jitter_and_shimmer(audio, sr=sr)
     flatness = extract_spectral_flatness(audio)
     discontinuity_data = extract_spectral_flux_and_discontinuity(audio, sr=sr)
+    vocoder_data = extract_high_freq_vocoder_metrics(audio, sr=sr)
+    hnr_data = extract_harmonic_to_noise_ratio(audio, sr=sr)
     
-    # Prosodic composite score [0, 1]
+    # 5-Layer Forensic Decision Matrix
+    # Layer 1: Pitch Dynamic Inflection
+    l1_score = pitch_data["contour_flatness_score"]
+    l1_pass = l1_score < 0.50
+
+    # Layer 2: Vocal Fold Jitter / Shimmer
+    l2_score = perturb_data["jitter_anomaly"]
+    l2_pass = l2_score < 0.40
+
+    # Layer 3: High-Frequency Vocoder Cutoff / Buzz
+    l3_score = vocoder_data["vocoder_layer_score"]
+    l3_pass = not vocoder_data["vocoder_cutoff_detected"]
+
+    # Layer 4: Harmonic-to-Noise Naturalness
+    l4_score = hnr_data["hnr_anomaly_score"]
+    l4_pass = l4_score < 0.45
+
+    # Layer 5: Spectral Discontinuity & Phase Flux
+    l5_score = discontinuity_data["discontinuity_score"]
+    l5_pass = not discontinuity_data["discontinuity_detected"]
+
+    # Weighted Prosodic Composite Score [0.0 - 1.0]
     prosodic_composite = (
-        0.45 * pitch_data["contour_flatness_score"] +
-        0.35 * perturb_data["jitter_anomaly"] +
-        0.20 * (1.0 if flatness > 0.35 or flatness < 0.02 else 0.2)
+        0.30 * l1_score +
+        0.25 * l2_score +
+        0.20 * l3_score +
+        0.15 * l4_score +
+        0.10 * l5_score
     )
+
+    layers_summary = {
+        "l1_pitch_naturalness": {"score": round(l1_score, 3), "passed": l1_pass, "label": "Pitch Dynamic Inflection"},
+        "l2_vocal_fold_tremor": {"score": round(l2_score, 3), "passed": l2_pass, "label": "Vocal Fold Micro-Jitter"},
+        "l3_vocoder_cutoff": {"score": round(l3_score, 3), "passed": l3_pass, "label": "High-Freq Vocoder Roll-off"},
+        "l4_harmonic_hnr": {"score": round(l4_score, 3), "passed": l4_pass, "label": "Harmonic-to-Noise Naturalness"},
+        "l5_phase_continuity": {"score": round(l5_score, 3), "passed": l5_pass, "label": "Phase & Splice Continuity"}
+    }
     
     return {
         "energy_rms": round(rms_energy, 4),
@@ -339,5 +459,8 @@ def extract_acoustic_features(audio: np.ndarray, sr: int = 16000) -> dict:
         "perturbation": perturb_data,
         "spectral_flatness": flatness,
         "discontinuity": discontinuity_data,
-        "prosodic_spoof_score": round(float(prosodic_composite), 3)
+        "vocoder_metrics": vocoder_data,
+        "hnr": hnr_data,
+        "prosodic_spoof_score": round(float(prosodic_composite), 3),
+        "layers": layers_summary
     }

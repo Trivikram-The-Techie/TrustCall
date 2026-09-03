@@ -97,3 +97,59 @@ class StreamingAudioBuffer:
         """Clears the buffer."""
         self.buffer = np.zeros(0, dtype=np.float32)
         self.unprocessed_samples = 0
+
+
+class TemporalVoiceAccumulator:
+    """
+    10-Second Voiced Speech Accumulator for deep multi-layer biometric profiling.
+    Collects active voiced frames up to 10.0 seconds to distinguish continuous human vocal fold
+    tremor and natural prosody from synthesized speech.
+    """
+    def __init__(self, sample_rate: int = settings.SAMPLE_RATE, max_duration_sec: float = 10.0):
+        self.sample_rate = sample_rate
+        self.max_duration_sec = max_duration_sec
+        self.max_samples = int(sample_rate * max_duration_sec)
+        self.voiced_buffer = np.zeros(0, dtype=np.float32)
+
+    def add_voiced_samples(self, samples: np.ndarray):
+        """Appends voiced samples, keeping up to max_samples."""
+        if len(samples) == 0:
+            return
+        self.voiced_buffer = np.concatenate([self.voiced_buffer, samples.astype(np.float32)])
+        if len(self.voiced_buffer) > self.max_samples:
+            self.voiced_buffer = self.voiced_buffer[-self.max_samples:]
+
+    def get_accumulated_audio(self) -> np.ndarray:
+        """Returns the accumulated voiced speech array."""
+        return self.voiced_buffer
+
+    def get_stats(self) -> dict:
+        """Returns sampling duration, progress percentage, and confidence tier."""
+        total_sec = len(self.voiced_buffer) / float(self.sample_rate)
+        progress = min(100.0, (total_sec / self.max_duration_sec) * 100.0)
+
+        if total_sec < 2.5:
+            tier = "Calibrating"
+            confidence = 0.35
+            desc = "Ingesting vocal tract dynamics (0-2.5s)..."
+        elif total_sec < 6.0:
+            tier = "Profiling Layers"
+            confidence = 0.70
+            desc = "Evaluating 5-layer prosodic & spectral acoustics (2.5-6.0s)..."
+        else:
+            tier = "High-Confidence Verdict"
+            confidence = 0.95
+            desc = f"Deep biometric analysis complete ({total_sec:.1f}s sample window)"
+
+        return {
+            "voiced_duration_sec": round(total_sec, 2),
+            "target_duration_sec": self.max_duration_sec,
+            "progress_percent": round(progress, 1),
+            "confidence_tier": tier,
+            "confidence_weight": round(confidence, 2),
+            "status_description": desc
+        }
+
+    def reset(self):
+        """Clears the accumulator."""
+        self.voiced_buffer = np.zeros(0, dtype=np.float32)

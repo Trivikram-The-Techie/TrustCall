@@ -109,6 +109,14 @@ class RiskFusionEngine:
             
         if spectral_score >= 0.60:
             reasons.append("Phase flux discontinuity detected at audio slice points")
+
+        vocoder_info = acoustic_features.get("vocoder_metrics", {})
+        if vocoder_info.get("vocoder_cutoff_detected", False):
+            reasons.append("High-frequency vocoder cutoff anomaly (>7.2 kHz brickwall/buzz)")
+
+        hnr_info = acoustic_features.get("hnr", {})
+        if hnr_info.get("hnr_anomaly_score", 0.0) >= 0.50:
+            reasons.append(f"Abnormal Harmonic-to-Noise Ratio ({hnr_info.get('hnr_db', 0)} dB)")
             
         if nlp_score >= 0.50:
             matched = nlp_result.get("matched_phrases", [])
@@ -139,6 +147,8 @@ class RiskFusionEngine:
             "meta_contribution": round(self.w_meta * meta_score * 100, 1)
         }
 
+        layers = acoustic_features.get("layers", {})
+
         return {
             "risk_score": risk_score,
             "verdict": verdict,
@@ -148,7 +158,8 @@ class RiskFusionEngine:
             "explanation": primary_explanation,
             "forensic_reasons": reasons,
             "components": components,
-            "contributions": component_contributions
+            "contributions": component_contributions,
+            "layers": layers
         }
 
 def np_clip(val: float, low: float, high: float) -> float:

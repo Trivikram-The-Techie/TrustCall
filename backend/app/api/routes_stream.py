@@ -12,7 +12,7 @@ import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.config import settings
-from app.audio.chunker import StreamingAudioBuffer
+from app.audio.chunker import StreamingAudioBuffer, TemporalVoiceAccumulator
 from app.audio.feature_extraction import decode_audio_bytes, decode_base64_audio, extract_acoustic_features
 from app.models.spoof_detector import SpoofDetector
 from app.nlp.urgency_keywords import urgency_scanner
@@ -33,6 +33,7 @@ async def websocket_audio_stream(websocket: WebSocket):
     
     session_id = str(uuid.uuid4())
     audio_buffer = StreamingAudioBuffer(sample_rate=settings.SAMPLE_RATE)
+    voice_accumulator = TemporalVoiceAccumulator(sample_rate=settings.SAMPLE_RATE, max_duration_sec=10.0)
     # Use dedicated session detector instance for localized rolling smoothing
     session_detector = SpoofDetector()
     
@@ -106,19 +107,27 @@ async def websocket_audio_stream(websocket: WebSocket):
                     })
                     continue
 
-                # 1. Feature Extraction on Active Speech Window
-                features = extract_acoustic_features(window, sr=settings.SAMPLE_RATE)
+                # 1. Accumulate active voiced frames into the 10-second buffer
+                voice_accumulator.add_voiced_samples(window)
+                accum_stats = voice_accumulator.get_stats()
+                accum_audio = voice_accumulator.get_accumulated_audio()
+
+                # If enough audio has accumulated (>2.5s), run deep profiling on accumulated audio; else on window
+                eval_audio = accum_audio if len(accum_audio) >= int(settings.SAMPLE_RATE * 2.5) else window
+
+                # 2. Feature Extraction on Voiced Speech Window
+                features = extract_acoustic_features(eval_audio, sr=settings.SAMPLE_RATE)
                 
-                # 2. Neural Anti-Spoofing Inference with Rolling Smoothing
+                # 3. Neural Anti-Spoofing Inference with Rolling Smoothing
                 model_result = session_detector.predict_chunk(window, sr=settings.SAMPLE_RATE)
                 
-                # 3. Transcribe & Urgency Scan
+                # 4. Transcribe & Urgency Scan
                 nlp_result = urgency_scanner.scan_text(current_transcript)
                 
-                # 4. Irreversible Hashing
+                # 5. Irreversible Hashing
                 emb_hash = privacy_hasher.generate_hash(window)
                 
-                # 5. Risk Score Multi-Signal Fusion
+                # 6. Risk Score Multi-Signal Fusion
                 risk_eval = risk_engine.evaluate_risk(
                     model_result=model_result,
                     acoustic_features=features,
@@ -126,7 +135,7 @@ async def websocket_audio_stream(websocket: WebSocket):
                     caller_metadata=caller_meta
                 )
                 
-                # 6. Ephemeral Session Record
+                # 7. Ephemeral Session Record
                 session_store.record_chunk_risk(
                     session_id=session_id,
                     risk_score=risk_eval["risk_score"],
@@ -136,7 +145,7 @@ async def websocket_audio_stream(websocket: WebSocket):
                     embedding_hash=emb_hash
                 )
                 
-                # 7. Real-Time Telemetry Payload to Client
+                # 8. Real-Time Telemetry Payload to Client with 10-Second Accumulator & 5 Layers
                 await websocket.send_json({
                     "event": "score_update",
                     "session_id": session_id,
@@ -153,7 +162,9 @@ async def websocket_audio_stream(websocket: WebSocket):
                     "components": risk_eval["components"],
                     "contributions": risk_eval["contributions"],
                     "transcript_snippet": current_transcript,
-                    "embedding_hash": emb_hash
+                    "embedding_hash": emb_hash,
+                    "accumulator": accum_stats,
+                    "layers": risk_eval.get("layers", {})
                 })
 
     except WebSocketDisconnect:
