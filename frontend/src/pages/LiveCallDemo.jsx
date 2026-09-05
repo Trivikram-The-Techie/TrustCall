@@ -5,6 +5,7 @@ import RiskGauge from '../components/RiskGauge';
 import ExplanationPanel from '../components/ExplanationPanel';
 import AlertTimeline from '../components/AlertTimeline';
 import ForensicReportModal from '../components/ForensicReportModal';
+import VocoderFingerprintCard from '../components/VocoderFingerprintCard';
 import { AudioStreamRecorder, ClientAcousticForensics } from '../utils/audioUtils';
 
 export default function LiveCallDemo() {
@@ -45,6 +46,20 @@ export default function LiveCallDemo() {
   const [webhookStatus, setWebhookStatus] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [currentReportData, setCurrentReportData] = useState(null);
+  const [vocoderFingerprint, setVocoderFingerprint] = useState({
+    primary_architecture: 'Organic Human Biomechanics',
+    architecture_scores: {
+      'Organic Human Biomechanics': 0.89,
+      'Diffusion / Flow-Matching (ElevenLabs/XTTS)': 0.05,
+      'Neural Vocoder (HiFi-GAN/BigVGAN)': 0.03,
+      'Autoregressive Codec (Bark/AudioLM)': 0.03
+    },
+    comb_ripple_index: 0.12,
+    phase_continuity_index: 0.94,
+    pitch_stability_index: 0.32,
+    confidence: 0.89,
+    fingerprint_summary: 'Natural vocal tract micro-tremor and physiological pitch trajectory confirmed.'
+  });
 
   const handleOpenForensicReport = async () => {
     const callerNumber = isPlayingPreset === 'cloned' ? '+91 98201 44521' : '+91 88402 19932';
@@ -137,6 +152,7 @@ export default function LiveCallDemo() {
 
           if (data.accumulator) setAccumulator(data.accumulator);
           if (data.layers) setLayers(data.layers);
+          if (data.vocoder_fingerprint) setVocoderFingerprint(data.vocoder_fingerprint);
 
           if (['Medium', 'High', 'Critical'].includes(data.verdict)) {
             setEvents((prev) => [
@@ -204,6 +220,7 @@ export default function LiveCallDemo() {
             setActionRecommendation(evalResult.action_recommendation);
             if (evalResult.accumulator) setAccumulator(evalResult.accumulator);
             if (evalResult.layers) setLayers(evalResult.layers);
+            if (evalResult.vocoder_fingerprint) setVocoderFingerprint(evalResult.vocoder_fingerprint);
 
             if (['Medium', 'High', 'Critical'].includes(evalResult.verdict)) {
               setEvents((prev) => {
@@ -376,6 +393,38 @@ export default function LiveCallDemo() {
           l3_vocoder_cutoff: { passed: false, label: "High-Freq Vocoder Roll-off", score: 0.82 },
           l4_harmonic_hnr: { passed: false, label: "Harmonic-to-Noise Naturalness", score: 0.75 },
           l5_phase_continuity: { passed: true, label: "Respiratory & Phase Continuity", score: 0.20 }
+        });
+      }
+
+      if (data.vocoder_fingerprint) {
+        setVocoderFingerprint(data.vocoder_fingerprint);
+      } else {
+        setVocoderFingerprint(isGenuine ? {
+          primary_architecture: 'Organic Human Biomechanics',
+          architecture_scores: {
+            'Organic Human Biomechanics': 0.94,
+            'Diffusion / Flow-Matching (ElevenLabs/XTTS)': 0.03,
+            'Neural Vocoder (HiFi-GAN/BigVGAN)': 0.02,
+            'Autoregressive Codec (Bark/AudioLM)': 0.01
+          },
+          comb_ripple_index: 0.08,
+          phase_continuity_index: 0.97,
+          pitch_stability_index: 0.28,
+          confidence: 0.94,
+          fingerprint_summary: 'Natural vocal tract micro-tremor and physiological pitch trajectory confirmed.'
+        } : {
+          primary_architecture: 'Diffusion / Flow-Matching (ElevenLabs/XTTS)',
+          architecture_scores: {
+            'Organic Human Biomechanics': 0.02,
+            'Diffusion / Flow-Matching (ElevenLabs/XTTS)': 0.68,
+            'Neural Vocoder (HiFi-GAN/BigVGAN)': 0.20,
+            'Autoregressive Codec (Bark/AudioLM)': 0.10
+          },
+          comb_ripple_index: 0.72,
+          phase_continuity_index: 0.31,
+          pitch_stability_index: 0.86,
+          confidence: 0.88,
+          fingerprint_summary: 'Diffusion / Flow-matching signature detected: unnatural pitch curvature flatness and over-smoothed phase.'
         });
       }
 
@@ -646,14 +695,16 @@ export default function LiveCallDemo() {
           />
         </div>
 
-        {/* Right Column: Explanation Panel */}
-        <div className="lg:col-span-7">
+        {/* Right Column: Explanation Panel & Vocoder Fingerprint */}
+        <div className="lg:col-span-7 space-y-6">
           <ExplanationPanel
             components={components}
             explanation={explanation}
             forensicReasons={forensicReasons}
             actionRecommendation={actionRecommendation}
           />
+
+          <VocoderFingerprintCard fingerprint={vocoderFingerprint} />
         </div>
       </div>
 

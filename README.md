@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-16%2F16_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-21%2F21_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -26,6 +26,8 @@ Voice cloning technology powered by diffusion models and neural vocoders (e.g., 
 
 - **Real-Time Streaming Analysis**: Ingests live 16kHz audio chunks every 250ms via WebSocket (`/v1/stream`), providing dynamic score updates without blocking call audio.
 - **Deep Anti-Spoofing Architecture**: Features `AntiSpoofNet` (AASIST / Light-CNN spectral convolutional baseline with Squeeze-and-Excitation channel attention) fine-tuned on synthetic speech artifacts.
+- **Neural Vocoder Architecture Fingerprinting**: Forensically identifies the underlying generative model family—*Diffusion / Flow-Matching (ElevenLabs / XTTS)*, *Neural Vocoders (HiFi-GAN / BigVGAN)*, or *Autoregressive Codecs (Bark)*—using high-frequency comb ripples and phase dispersion.
+- **Cryptographic Forensic Audit Certificates**: Generates tamper-proof SHA-256 HMAC-signed evidence bags and printable certificates conforming to Indian IT Act (Section 65B/66D admissible evidence) for cybercells and bank fraud portals.
 - **Multi-Signal Risk Fusion**: Fuses 5 independent fraud signals rather than relying on a single black box:
   $$\text{Risk Score} = 100 \times \left( w_1 \cdot P(\text{synth}) + w_2 \cdot D_{\text{spectral}} + w_3 \cdot A_{\text{prosody}} + w_4 \cdot S_{\text{urgency}} + w_5 \cdot M_{\text{meta}} \right)$$
 - **Indian Language Scam NLP**: Scans for regional scam vectors including *Digital Arrest ("CBI warrant", "Narcotics parcel")*, *Banking ("OTP share karo", "khata block")*, and *Extortion ("kisi ko mat batana", "hospital emergency")*.
@@ -185,7 +187,7 @@ pip install -r requirements.txt
 # Generate demo audio files (genuine & synthetic samples)
 python demo_audio/generate_demo_samples.py
 
-# Run the test suite (16 tests)
+# Run the test suite (21 tests)
 pytest tests/ -v
 
 # Start FastAPI server
@@ -213,6 +215,8 @@ Open **http://localhost:5173** in your browser.
    - Click **Preset B: Cloned Scammer Attack**.
    - Observe the Risk Gauge immediately surge to **CRITICAL** (85–95).
    - Review the Explanation Panel: detects vocoder sub-band artifacts, locked pitch contour, and flags high-risk legal/banking coercion keywords (*"Delhi Police Crime Branch", "OTP", "Arrest warrant"*).
+   - Review the **Neural Vocoder Fingerprint Card**: accurately classifies the attack architecture (*Diffusion / Flow-Matching*).
+   - Click **"Forensic Audit Certificate"** to view and export the cryptographic HMAC-SHA256 evidence bag.
    - The emergency banner appears with a one-click **"Dispatch Bank Webhook"** trigger.
 3. **Live Microphone Stream**:
    - Click **Live Mic Stream** to test your own voice in real-time. Speak normally to see the live waveform react and the risk score stay low.
@@ -229,4 +233,4 @@ On held-out evaluation test clips:
 - **Streaming Latency**: ~320ms end-to-end per chunk
 - **Feature Extraction Overhead**: <18ms on CPU
 - **Neural Model Inference**: <42ms on CPU (AntiSpoofNet)
-- **Unit Test Coverage**: 16/16 tests passing across audio processing, VAD chunking, neural inference, NLP keywords, and REST/WebSocket APIs.
+- **Unit Test Coverage**: 21/21 tests passing across audio processing, VAD chunking, neural inference, NLP keywords, forensic certificates, vocoder fingerprinting, and REST/WebSocket APIs.

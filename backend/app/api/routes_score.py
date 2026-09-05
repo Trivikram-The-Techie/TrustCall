@@ -20,6 +20,7 @@ from app.nlp.urgency_keywords import urgency_scanner
 from app.nlp.transcriber import transcriber
 from app.models.risk_engine import risk_engine
 from app.privacy.embedding_store import privacy_hasher, session_store
+from app.models.vocoder_fingerprint import vocoder_fingerprinter
 
 router = APIRouter(prefix="/v1", tags=["Scoring"])
 
@@ -46,6 +47,7 @@ class ScoreResponse(BaseModel):
     embedding_hash: str
     is_repeat_offender: bool
     offender_details: Optional[dict] = None
+    vocoder_fingerprint: Optional[dict] = None
 
 @router.post("/score", response_model=ScoreResponse)
 async def score_audio_clip(payload: ScoreRequest):
@@ -89,7 +91,14 @@ async def score_audio_clip(payload: ScoreRequest):
         caller_metadata=payload.caller_metadata
     )
     
-    # 6. Ephemeral Session Logging (Zero Raw Audio Saved)
+    # 6. Vocoder Architecture Fingerprinting
+    fingerprint = vocoder_fingerprinter.analyze_audio_fingerprint(
+        audio=audio,
+        acoustic_features=features,
+        spoof_probability=model_result["smoothed_probability"]
+    )
+
+    # 7. Ephemeral Session Logging (Zero Raw Audio Saved)
     session_data = session_store.record_chunk_risk(
         session_id=session_id,
         risk_score=risk_eval["risk_score"],
@@ -113,7 +122,8 @@ async def score_audio_clip(payload: ScoreRequest):
         transcript=transcript_text,
         embedding_hash=embedding_hash,
         is_repeat_offender=session_data.get("is_repeat_offender", False),
-        offender_details=session_data.get("offender_details")
+        offender_details=session_data.get("offender_details"),
+        vocoder_fingerprint=fingerprint
     )
 
 
@@ -158,6 +168,13 @@ async def score_audio_file(
         caller_metadata=metadata
     )
     
+    # Vocoder Fingerprint
+    fingerprint = vocoder_fingerprinter.analyze_audio_fingerprint(
+        audio=audio,
+        acoustic_features=features,
+        spoof_probability=model_result["smoothed_probability"]
+    )
+
     session_data = session_store.record_chunk_risk(
         session_id=s_id,
         risk_score=risk_eval["risk_score"],
@@ -181,5 +198,6 @@ async def score_audio_file(
         transcript=transcript_text,
         embedding_hash=embedding_hash,
         is_repeat_offender=session_data.get("is_repeat_offender", False),
-        offender_details=session_data.get("offender_details")
+        offender_details=session_data.get("offender_details"),
+        vocoder_fingerprint=fingerprint
     )

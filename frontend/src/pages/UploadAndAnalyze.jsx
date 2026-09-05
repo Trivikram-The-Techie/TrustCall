@@ -3,6 +3,7 @@ import { UploadCloud, FileAudio, CheckCircle2, AlertTriangle, Cpu, ShieldCheck, 
 import RiskGauge from '../components/RiskGauge';
 import ExplanationPanel from '../components/ExplanationPanel';
 import ForensicReportModal from '../components/ForensicReportModal';
+import VocoderFingerprintCard from '../components/VocoderFingerprintCard';
 
 export default function UploadAndAnalyze() {
   const [file, setFile] = useState(null);
@@ -231,6 +232,10 @@ export default function UploadAndAnalyze() {
                 forensicReasons={result.forensic_reasons}
                 actionRecommendation={result.action_recommendation}
               />
+
+              {result.vocoder_fingerprint && (
+                <VocoderFingerprintCard fingerprint={result.vocoder_fingerprint} />
+              )}
 
               {/* Privacy Fingerprint */}
               <div className="bg-[#111827] border border-slate-800 p-4 rounded-xl flex items-center justify-between text-xs font-mono">
