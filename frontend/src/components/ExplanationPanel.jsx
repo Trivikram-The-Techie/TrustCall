@@ -20,7 +20,7 @@ export default function ExplanationPanel({
       score: modelConf,
       weight: '45%',
       icon: Cpu,
-      desc: 'Spectral CNN / AASIST artifact detector'
+      desc: 'AASIST-L Pre-Trained Graph Attention Network (EER: 0.99%)'
     },
     {
       id: 'prosody',

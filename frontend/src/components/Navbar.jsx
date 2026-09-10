@@ -60,8 +60,9 @@ export default function Navbar({ activeTab, setActiveTab, systemHealthy = true }
             <span className="text-slate-300">NEURAL DEFENSE ACTIVE</span>
           </div>
           <span className="text-slate-600">|</span>
-          <span className="text-cyan-400 text-[11px]">16kHz AASIST/CNN</span>
+          <span className="text-cyan-400 text-[11px]">AASIST-L Pre-Trained (EER: 0.99%)</span>
         </div>
+
       </div>
     </header>
   );

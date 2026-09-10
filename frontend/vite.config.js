@@ -16,6 +16,10 @@ export default defineConfig({
       '/static': {
         target: 'http://localhost:8000',
         changeOrigin: true
+      },
+      '/health': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
       }
     }
   }

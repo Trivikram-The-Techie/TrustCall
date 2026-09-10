@@ -65,10 +65,11 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "neural_model": "AntiSpoofNet (AASIST / Spectral CNN)",
+        "neural_model": "AntiSpoofNet (AASIST-L Pre-Trained Deep Graph Attention)",
         "nlp_scanner": "Multilingual Urgency Engine (EN/HI)",
         "privacy_compliance": "Zero-Raw-Audio-Persisted"
     }
+
 
 if __name__ == "__main__":
     import uvicorn
