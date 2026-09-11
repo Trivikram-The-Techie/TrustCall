@@ -36,3 +36,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Standalone subprojects
+java-lab-portal/

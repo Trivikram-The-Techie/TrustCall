@@ -25,7 +25,7 @@ Voice cloning technology powered by diffusion models and neural vocoders (e.g., 
 ## 2. Key Capabilities & Innovations
 
 - **Real-Time Streaming Analysis**: Ingests live 16kHz audio chunks every 250ms via WebSocket (`/v1/stream`), providing dynamic score updates without blocking call audio.
-- **Deep Anti-Spoofing Architecture**: Features `AntiSpoofNet` (AASIST / Light-CNN spectral convolutional baseline with Squeeze-and-Excitation channel attention) fine-tuned on synthetic speech artifacts.
+- **Deep Anti-Spoofing Architecture**: Features `AntiSpoofNet` powered by pre-trained **AASIST-L** (Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention Networks with SincNet raw filterbanks, achieving **0.99% EER** on the ASVspoof benchmark).
 - **Neural Vocoder Architecture Fingerprinting**: Forensically identifies the underlying generative model family—*Diffusion / Flow-Matching (ElevenLabs / XTTS)*, *Neural Vocoders (HiFi-GAN / BigVGAN)*, or *Autoregressive Codecs (Bark)*—using high-frequency comb ripples and phase dispersion.
 - **Cryptographic Forensic Audit Certificates**: Generates tamper-proof SHA-256 HMAC-signed evidence bags and printable certificates conforming to Indian IT Act (Section 65B/66D admissible evidence) for cybercells and bank fraud portals.
 - **Multi-Signal Risk Fusion**: Fuses 5 independent fraud signals rather than relying on a single black box:
