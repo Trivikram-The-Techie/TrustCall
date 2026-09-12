@@ -80,3 +80,48 @@ def test_privacy_embedding_hasher():
     # Deterministic for identical acoustic input
     assert hash1 == hash2
     assert len(hash1) == 64  # SHA-256 hex string
+
+
+def test_aasist_l_direct_inference():
+    from app.models.aasist import create_aasist_l_model
+    import os
+    import torch
+
+    weights_path = os.path.join(os.path.dirname(__file__), "..", "app", "models", "weights", "AASIST-L.pth")
+    model = create_aasist_l_model(weights_path=weights_path, device="cpu")
+    
+    x = torch.randn(1, 64600)
+    with torch.no_grad():
+        last_hidden, logits = model(x)
+    
+    assert last_hidden.shape[0] == 1
+    assert logits.shape == (1, 2)
+    probs = torch.softmax(logits, dim=1)
+    assert 0.0 <= probs[0, 0].item() <= 1.0
+    assert 0.0 <= probs[0, 1].item() <= 1.0
+
+
+def test_aasist_l_torchscript_export():
+    from app.models.aasist import create_aasist_l_model, export_aasist_l_to_torchscript
+    import os
+    import torch
+    import tempfile
+
+    weights_path = os.path.join(os.path.dirname(__file__), "..", "app", "models", "weights", "AASIST-L.pth")
+    model = create_aasist_l_model(weights_path=weights_path, device="cpu")
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        ts_path = os.path.join(tmpdir, "aasist_l.pt")
+        traced = export_aasist_l_to_torchscript(model, ts_path)
+        assert os.path.exists(ts_path)
+        
+        # Test loaded TorchScript module
+        loaded = torch.jit.load(ts_path)
+        x = torch.randn(1, 64600)
+        with torch.no_grad():
+            _, out_orig = model(x)
+            _, out_ts = loaded(x)
+        
+        diff = torch.max(torch.abs(out_orig - out_ts)).item()
+        assert diff < 1e-4
+

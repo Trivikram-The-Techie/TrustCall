@@ -630,3 +630,19 @@ def create_aasist_l_model(weights_path: str = None, device: str = "cpu") -> Mode
     model.eval()
     return model
 
+
+def export_aasist_l_to_torchscript(model: Model, output_path: str = None) -> torch.jit.ScriptModule:
+    """
+    Exports the AASIST-L architecture to an optimized TorchScript module
+    suitable for mobile/embedded C++ dialers and edge inference.
+    """
+    import os
+    dummy_input = torch.randn(1, 64600)
+    model.eval()
+    traced_model = torch.jit.trace(model, dummy_input, check_trace=False)
+    if output_path:
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+        traced_model.save(output_path)
+    return traced_model
+
+
