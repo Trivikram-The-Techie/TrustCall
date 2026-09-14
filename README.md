@@ -135,7 +135,9 @@ TrustCall/
 │   │   ├── generate_demo_samples.py    # Script generating genuine & cloned samples
 │   │   ├── genuine_call_sample.wav     # Natural speech audio clip
 │   │   └── cloned_scam_sample.wav      # Synthetic voice attack audio clip
-│   ├── tests/                          # 16 unit & integration tests (100% passing)
+│   ├── tests/                          # 24 unit & integration tests (100% passing)
+│   ├── evaluate_model_accuracy.py      # AASIST-L benchmark and validation suite
+│   ├── cli.py                          # VoiceShield forensic CLI scanner
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
@@ -158,7 +160,8 @@ TrustCall/
 │   └── Dockerfile
 ├── sdk/
 │   ├── js/voiceshield-sdk.js           # Lightweight client SDK for Web/Node.js
-│   └── android/VoiceShieldClient.kt    # Android Kotlin SDK for mobile dialers
+│   ├── android/VoiceShieldClient.kt    # Android Kotlin SDK for mobile dialers
+│   └── python/voiceshield.py           # Python Client SDK for telephony gateways & IVRs
 ├── docker-compose.yml                  # Full stack single-command launch
 └── README.md
 ```

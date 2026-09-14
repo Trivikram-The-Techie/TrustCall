@@ -38,6 +38,23 @@ shield.listener = object : VoiceShieldClient.ScoreListener {
 }
 shield.startStreamingSession()`;
 
+  const pythonSnippet = `# Python SDK Integration for Telephony & IVR Servers
+from sdk.python import VoiceShieldClient
+
+shield = VoiceShieldClient(base_url="http://localhost:8000")
+
+# Analyze incoming audio clip or WAV recording
+result = shield.score_audio_file(
+    filepath="caller_audio.wav",
+    transcript="Transfer money immediately OTP required",
+    is_unknown_number=True
+)
+
+print(f"Risk Score: {result['risk_score']} / 100 ({result['verdict']})")
+if result['risk_score'] >= 60:
+    print(f"Action: {result['action_recommendation']}")`;
+
+
   const restCurl = `# Instant Single-Clip Scoring REST API
 curl -X POST "http://localhost:8000/v1/score" \\
   -H "Content-Type: application/json" \\
@@ -121,6 +138,26 @@ curl -X POST "http://localhost:8000/v1/score" \\
           </div>
           <pre className="p-4 text-xs font-mono text-emerald-300 bg-[#0B0F19]/80 overflow-x-auto">
             {androidSnippet}
+          </pre>
+        </div>
+
+        {/* Python SDK */}
+        <div className="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+          <div className="flex items-center justify-between px-4 py-3 bg-[#0B0F19] border-b border-slate-800">
+            <div className="flex items-center space-x-2">
+              <Terminal className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-semibold text-slate-200">Python Client SDK & CLI Scanner</span>
+            </div>
+            <button
+              onClick={() => copyToClipboard(pythonSnippet, 'python')}
+              className="flex items-center space-x-1 text-xs text-slate-400 hover:text-slate-200"
+            >
+              {copiedId === 'python' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedId === 'python' ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+          <pre className="p-4 text-xs font-mono text-cyan-300 bg-[#0B0F19]/80 overflow-x-auto">
+            {pythonSnippet}
           </pre>
         </div>
 
