@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from app.audio.feature_extraction import compute_log_mel_spectrogram
+from app.audio.feature_extraction import compute_log_mel_spectrogram, extract_high_freq_vocoder_metrics
 from app.config import settings
 from app.models.aasist import create_aasist_l_model
 
@@ -143,12 +143,10 @@ class SpoofDetector:
                 "vocoder_artifacts_detected": False
             }
 
-        # 1. Forensic acoustic check: high-freq variance and flatness
+        # 1. Forensic acoustic check: high-freq spectral crest & roll-off
         log_mel = compute_log_mel_spectrogram(audio, sr=sr, n_mels=80)
-        high_freq_slice = log_mel[60:, :]  # 6-8 kHz band
-        high_freq_var = float(np.var(high_freq_slice))
-        high_freq_flatness = float(np.mean(high_freq_slice))
-        vocoder_anomaly = bool(high_freq_var > 0.45 or high_freq_flatness > -2.0)
+        vocoder_metrics = extract_high_freq_vocoder_metrics(audio, sr=sr)
+        vocoder_anomaly = vocoder_metrics["vocoder_cutoff_detected"]
 
         # 2. Neural anti-spoofing model inference
         if self.use_aasist:

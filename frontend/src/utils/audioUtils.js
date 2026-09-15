@@ -154,9 +154,9 @@ export class ClientAcousticForensics {
 
     this.totalVoicedSamples += floatArray.length;
 
-    // 2. Pitch Autocorrelation (F0 Extraction)
+    // 2. Pitch Autocorrelation (F0 Extraction up to 650 Hz)
     const pitchHz = this.extractPitchAutocorrelation(floatArray, this.sampleRate);
-    if (pitchHz > 65 && pitchHz < 450) {
+    if (pitchHz > 65 && pitchHz < 650) {
       this.pitchHistory.push(pitchHz);
       if (this.pitchHistory.length > 300) this.pitchHistory.shift();
     }
@@ -180,7 +180,7 @@ export class ClientAcousticForensics {
   }
 
   extractPitchAutocorrelation(samples, sr) {
-    const minLag = Math.floor(sr / 400); // 400 Hz max
+    const minLag = Math.floor(sr / 650); // 650 Hz max (accommodates high-pitch, female, and child speech)
     const maxLag = Math.floor(sr / 65);  // 65 Hz min
     const len = samples.length;
 
@@ -255,24 +255,25 @@ export class ClientAcousticForensics {
 
     // --- Layer 1: Pitch Dynamic Entropy & Curvature ---
     let pitchStd = 25.0; // Default natural human baseline
-    let l1_score = 0.15;
+    let l1_score = 0.12;
     let l1_pass = true;
 
     if (this.pitchHistory.length >= 8) {
       const mean = this.pitchHistory.reduce((a, b) => a + b, 0) / this.pitchHistory.length;
       const variance = this.pitchHistory.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / this.pitchHistory.length;
       pitchStd = Math.sqrt(variance);
+      const pitchCv = pitchStd / (mean + 1e-4);
 
-      // In real human conversational speech, standard deviation of F0 is typically > 18 Hz.
-      // In TTS / cloned speech, F0 is either unnaturally flat (< 10 Hz) or codebook-quantized.
-      if (pitchStd < 9.0) {
+      // In real human conversational speech across low or high pitch,
+      // standard deviation is typically > 14 Hz or CV >= 0.05.
+      // In robotic or cloned speech, pitch is unnaturally invariant (<8 Hz std and CV < 0.035).
+      if (pitchStd < 8.0 && pitchCv < 0.035) {
         l1_score = 0.88;
         l1_pass = false;
-        reasons.push(`Layer 1 Alert: Unnaturally flat pitch contour (${pitchStd.toFixed(1)} Hz std, typical human is >18 Hz)`);
-      } else if (pitchStd < 16.0) {
-        l1_score = 0.55;
-        l1_pass = false;
-        reasons.push(`Layer 1 Caution: Constrained pitch modulation (${pitchStd.toFixed(1)} Hz std)`);
+        reasons.push(`Layer 1 Alert: Unnaturally flat pitch contour (${pitchStd.toFixed(1)} Hz std, typical human is >14 Hz)`);
+      } else if (pitchStd < 14.0 && pitchCv < 0.05) {
+        l1_score = 0.45;
+        l1_pass = true;
       } else {
         l1_score = 0.12;
         l1_pass = true;
@@ -280,21 +281,29 @@ export class ClientAcousticForensics {
     }
 
     // --- Layer 2: Vocal Fold Jitter & Shimmer Perturbation ---
-    let jitterAnomaly = 0.15;
+    let jitterAnomaly = 0.12;
     let l2_pass = true;
     if (this.pitchHistory.length >= 6) {
       let diffSum = 0;
+      let validTransitions = 0;
       for (let i = 1; i < this.pitchHistory.length; i++) {
-        diffSum += Math.abs(this.pitchHistory[i] - this.pitchHistory[i - 1]);
+        const ratio = this.pitchHistory[i] / (this.pitchHistory[i - 1] + 1e-6);
+        // Only evaluate steady-state phoneme pitch periods (filter natural speech intonation melody steps)
+        if (ratio >= 0.82 && ratio <= 1.18) {
+          diffSum += Math.abs(this.pitchHistory[i] - this.pitchHistory[i - 1]);
+          validTransitions++;
+        }
       }
       const meanPitch = this.pitchHistory.reduce((a, b) => a + b, 0) / this.pitchHistory.length;
-      const jitterApprox = (diffSum / (this.pitchHistory.length - 1)) / (meanPitch + 1e-4) * 100;
+      const jitterApprox = validTransitions > 0 
+        ? (diffSum / validTransitions) / (meanPitch + 1e-4) * 100 
+        : 1.2;
 
-      if (jitterApprox < 0.35) {
+      if (jitterApprox < 0.30) {
         jitterAnomaly = 0.85; // Too perfect (neural vocoder over-smoothing)
         l2_pass = false;
-        reasons.push(`Layer 2 Alert: Unnaturally low vocal fold jitter (<0.35%, neural vocoder artifact)`);
-      } else if (jitterApprox > 6.5) {
+        reasons.push(`Layer 2 Alert: Unnaturally low vocal fold jitter (<0.30%, neural vocoder artifact)`);
+      } else if (jitterApprox > 6.0) {
         jitterAnomaly = 0.75; // Phase vocoder jitter smearing
         l2_pass = false;
         reasons.push(`Layer 2 Alert: Erratic phase jitter dispersion (${jitterApprox.toFixed(1)}%)`);
@@ -304,16 +313,16 @@ export class ClientAcousticForensics {
       }
     }
 
-    // --- Layer 3: High-Frequency Vocoder Roll-off ---
-    let l3_score = 0.15;
+    // --- Layer 3: High-Frequency Vocoder Roll-off & Buzz ---
+    let l3_score = 0.12;
     let l3_pass = true;
     if (this.hfRatios.length >= 5) {
       const avgZcr = this.hfRatios.reduce((a, b) => a + b, 0) / this.hfRatios.length;
-      if (avgZcr > 0.45) {
-        l3_score = 0.82; // High-frequency vocoder metallic buzz
+      if (avgZcr > 0.58) {
+        l3_score = 0.82; // Extreme vocoder metallic buzz
         l3_pass = false;
         reasons.push(`Layer 3 Alert: High-frequency vocoder harmonic buzz / comb-filtering detected`);
-      } else if (avgZcr < 0.03) {
+      } else if (avgZcr < 0.02) {
         l3_score = 0.78; // Brickwall cutoff above 7 kHz
         l3_pass = false;
         reasons.push(`Layer 3 Alert: Band-limited brickwall cutoff typical of neural TTS generation`);
@@ -324,35 +333,40 @@ export class ClientAcousticForensics {
     }
 
     // --- Layer 4: Harmonic-to-Noise Naturalness ---
-    let l4_score = 0.15;
+    let l4_score = 0.12;
     let l4_pass = true;
     if (this.peakHistory.length >= 8) {
       let ampDiff = 0;
+      let count = 0;
       for (let i = 1; i < this.peakHistory.length; i++) {
-        ampDiff += Math.abs(this.peakHistory[i] - this.peakHistory[i - 1]);
+        const r = this.peakHistory[i] / (this.peakHistory[i - 1] + 1e-6);
+        if (r >= 0.75 && r <= 1.35) {
+          ampDiff += Math.abs(this.peakHistory[i] - this.peakHistory[i - 1]);
+          count++;
+        }
       }
       const meanAmp = this.peakHistory.reduce((a, b) => a + b, 0) / this.peakHistory.length;
-      const shimmerApprox = (ampDiff / (this.peakHistory.length - 1)) / (meanAmp + 1e-4) * 100;
-      if (shimmerApprox < 1.0) {
+      const shimmerApprox = count > 0 ? (ampDiff / count) / (meanAmp + 1e-4) * 100 : 3.5;
+      if (shimmerApprox < 0.8) {
         l4_score = 0.75;
         l4_pass = false;
-        reasons.push(`Layer 4 Alert: Rigid amplitude regularity (Shimmer <1.0%)`);
+        reasons.push(`Layer 4 Alert: Rigid amplitude regularity (Shimmer <0.8%)`);
       } else {
-        l4_score = 0.15;
+        l4_score = 0.12;
         l4_pass = true;
       }
     }
 
     // --- Layer 5: Respiratory Floor & Silence Naturalness ---
-    let l5_score = 0.15;
+    let l5_score = 0.12;
     let l5_pass = true;
 
     // Multi-Layer Weighted Fusion
     const rawRisk = (
-      0.35 * l1_score +
+      0.30 * l1_score +
       0.25 * jitterAnomaly +
       0.20 * l3_score +
-      0.10 * l4_score +
+      0.15 * l4_score +
       0.10 * l5_score
     );
 

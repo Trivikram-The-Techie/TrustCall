@@ -66,7 +66,21 @@ class RiskFusionEngine:
             (self.w_nlp * nlp_score) +
             (self.w_meta * meta_score)
         )
-        
+
+        # Multi-signal Risk Calibration:
+        # 1. Bona Fide Human Voice Calibration:
+        # When deep neural model (AASIST-L) predicts authentic human speech (model_prob < 0.25)
+        # and there are no linguistic scam indicators (nlp_score == 0.0):
+        # Dampen minor room noise/microphone acoustic penalties so real speech stays reliably in Low tier (<25).
+        if model_prob < 0.25 and nlp_score == 0.0:
+            if model_prob < 0.10:
+                raw_weighted_sum = min(raw_weighted_sum, 0.16)
+            else:
+                raw_weighted_sum = min(raw_weighted_sum, 0.22)
+        elif model_prob >= 0.70 or (model_prob >= 0.50 and nlp_score >= 0.50):
+            # Cloned impersonation escalation
+            raw_weighted_sum = max(raw_weighted_sum, 0.76)
+
         # Scale to 0-100
         risk_score = int(round(np_clip(raw_weighted_sum * 100.0, 0.0, 100.0)))
         

@@ -122,11 +122,12 @@ def extract_pitch_and_contour(audio: np.ndarray, sr: int = 16000) -> dict:
     """
     Computes pitch contour via autocorrelation windowing.
     Evaluates mean pitch, pitch variance, and contour gradient smoothness.
+    Accommodates human vocal range from bass (65 Hz) to soprano/children (650 Hz).
     TTS/Voice clones typically exhibit unnaturally flattened or stepped pitch contours.
     """
     frame_size = int(sr * 0.03)  # 30ms frame
     hop_size = int(sr * 0.01)    # 10ms hop
-    min_lag = int(sr / 400.0)    # 400 Hz max pitch
+    min_lag = int(sr / 650.0)    # 650 Hz max pitch (covers soprano, female, and child pitch)
     max_lag = int(sr / 65.0)     # 65 Hz min pitch
     
     if len(audio) < frame_size:
@@ -145,7 +146,7 @@ def extract_pitch_and_contour(audio: np.ndarray, sr: int = 16000) -> dict:
         frame = audio[start:start + frame_size]
         # Energy check for voiced frame
         rms = np.sqrt(np.mean(frame ** 2))
-        if rms < 0.01:
+        if rms < 0.012:
             continue
             
         corr = np.correlate(frame, frame, mode='full')
@@ -160,85 +161,101 @@ def extract_pitch_and_contour(audio: np.ndarray, sr: int = 16000) -> dict:
                 
     if len(pitches) < 3:
         return {
-            "pitch_mean_hz": 120.0,
+            "pitch_mean_hz": 160.0,
             "pitch_std_hz": 0.0,
-            "contour_flatness_score": 0.7,
+            "contour_flatness_score": 0.50,
             "pitch_values": []
         }
         
     pitches = np.array(pitches)
     mean_pitch = float(np.mean(pitches))
     std_pitch = float(np.std(pitches))
+    cv_pitch = std_pitch / (mean_pitch + 1e-6)
     
-    # In natural human speech, standard deviation of F0 is typically 18-50 Hz.
-    # In robotic or synthesized speech, F0 is either unnaturally invariant (<10 Hz)
-    # or shows mechanical steps.
-    if std_pitch < 10.0:
-        flatness_score = 0.85  # High synthetic tell
-    elif std_pitch < 18.0:
-        flatness_score = 0.55
+    # In natural human speech, intonation naturally moves across syllables:
+    # - Standard deviation of F0 is typically > 14 Hz, or coefficient of variation CV >= 0.05 (5%).
+    # - Monotone robotic / synthetic speech has unnaturally flat pitch (<8 Hz std and CV < 0.035).
+    if std_pitch < 8.0 and cv_pitch < 0.035:
+        flatness_score = 0.85  # High synthetic tell (artificially monotone)
+    elif std_pitch < 14.0 and cv_pitch < 0.05:
+        flatness_score = 0.45
     else:
-        flatness_score = 0.15  # Natural human inflection
+        flatness_score = 0.12  # Natural human inflection across low or high pitch
         
     return {
         "pitch_mean_hz": round(mean_pitch, 2),
         "pitch_std_hz": round(std_pitch, 2),
+        "pitch_cv": round(cv_pitch, 3),
         "contour_flatness_score": round(flatness_score, 3),
-        "pitch_values": [round(p, 1) for p in pitches[:50]]
+        "pitch_values": [round(float(p), 1) for p in pitches[:50]]
     }
 
 
 def extract_jitter_and_shimmer(audio: np.ndarray, sr: int = 16000) -> dict:
     """
-    Computes local cycle-to-cycle perturbation:
-    - Jitter: variation in fundamental period length (human: 0.5% - 2.5%, TTS: often <0.3% or erratic)
-    - Shimmer: variation in cycle peak amplitude (human: 2% - 6%)
+    Computes local cycle-to-cycle perturbation across voiced speech segments:
+    - Jitter: perturbation in fundamental period length (human: 0.5% - 2.5%, TTS: often <0.3% or erratic >6.0%)
+    - Shimmer: perturbation in cycle peak amplitude (human: 2% - 9%)
+    Accurately tracks glottal pitch periods in voiced frames, rejecting octave jumps.
     """
-    frame_size = int(sr * 0.025)
+    frame_size = int(sr * 0.03)
     hop_size = int(sr * 0.01)
+    min_lag = int(sr / 650.0)
+    max_lag = int(sr / 65.0)
     
     if len(audio) < frame_size * 2:
-        return {"jitter_percent": 1.0, "shimmer_percent": 3.0, "jitter_anomaly": 0.2}
+        return {"jitter_percent": 1.1, "shimmer_percent": 3.2, "jitter_anomaly": 0.15}
 
-    peaks = []
+    periods = []
     amplitudes = []
-    num_frames = (len(audio) - frame_size) // hop_size
+    num_frames = max(1, (len(audio) - frame_size) // hop_size)
     
     for i in range(num_frames):
         start = i * hop_size
         frame = audio[start:start + frame_size]
         rms = np.sqrt(np.mean(frame ** 2))
-        if rms > 0.015:
-            max_idx = np.argmax(np.abs(frame))
-            peaks.append(start + max_idx)
-            amplitudes.append(np.abs(frame[max_idx]))
+        if rms < 0.015:
+            continue
             
-    if len(peaks) < 4:
-        return {"jitter_percent": 1.1, "shimmer_percent": 3.2, "jitter_anomaly": 0.25}
+        corr = np.correlate(frame, frame, mode='full')
+        corr = corr[len(corr)//2:]
+        if len(corr) > max_lag:
+            peak_idx = np.argmax(corr[min_lag:max_lag]) + min_lag
+            if corr[peak_idx] > 0.40 * corr[0]:
+                periods.append(peak_idx)
+                amplitudes.append(rms)
+                
+    if len(periods) < 4:
+        return {"jitter_percent": 1.1, "shimmer_percent": 3.2, "jitter_anomaly": 0.15}
         
-    periods = np.diff(peaks)
-    periods = periods[periods > 0]
+    periods = np.array(periods, dtype=float)
+    amplitudes = np.array(amplitudes, dtype=float)
     
-    if len(periods) < 3:
-        return {"jitter_percent": 1.1, "shimmer_percent": 3.2, "jitter_anomaly": 0.25}
-        
-    # Relative Jitter (RAP approximation)
-    mean_period = np.mean(periods)
-    jitter = (np.mean(np.abs(np.diff(periods))) / (mean_period + 1e-6)) * 100.0
+    # Calculate cycle-to-cycle perturbation for consecutive voiced frames of the same phoneme
+    diffs_p = []
+    diffs_a = []
+    for i in range(1, len(periods)):
+        ratio = periods[i] / (periods[i-1] + 1e-6)
+        if 0.82 <= ratio <= 1.18:  # Continuous voiced phonation (rejects octave jumps / unvoiced breaks)
+            diffs_p.append(abs(periods[i] - periods[i-1]))
+            diffs_a.append(abs(amplitudes[i] - amplitudes[i-1]))
+
+    mean_p = float(np.mean(periods))
+    mean_a = float(np.mean(amplitudes)) if len(amplitudes) > 0 else 0.05
     
-    # Relative Shimmer
-    amps = np.array(amplitudes)
-    mean_amp = np.mean(amps)
-    shimmer = (np.mean(np.abs(np.diff(amps))) / (mean_amp + 1e-6)) * 100.0
+    jitter = (np.mean(diffs_p) / mean_p * 100.0) if diffs_p else 1.25
+    shimmer = (np.mean(diffs_a) / (mean_a + 1e-6) * 100.0) if diffs_a else 3.5
     
-    # Anomaly indicator: synthetic voices often have unnaturally low jitter (<0.4%)
-    # or extreme jitter due to phase-vocoder artifacts (>6.0%)
-    if jitter < 0.4:
-        anomaly = 0.80  # Too perfect (robotic / vocoded)
-    elif jitter > 5.5:
-        anomaly = 0.75  # Phase jitter artifacts
+    # Anomaly indicator:
+    # - <0.30%: unnaturally low jitter (over-smoothed neural vocoder / robotic synthesizer)
+    # - >6.0%: erratic phase-vocoder artifacts or diffusion discontinuities
+    # - 0.5% - 2.5%: normal healthy human vocal fold micro-tremor
+    if jitter < 0.30:
+        anomaly = 0.80  # Over-smoothed neural vocoder
+    elif jitter > 6.0:
+        anomaly = 0.75  # Phase jitter smearing
     else:
-        anomaly = 0.15  # Natural human vocal tract micro-tremor
+        anomaly = 0.12  # Natural human vocal tract micro-tremor
         
     return {
         "jitter_percent": round(float(jitter), 3),
@@ -266,38 +283,53 @@ def extract_spectral_flatness(audio: np.ndarray) -> float:
 
 def extract_spectral_flux_and_discontinuity(audio: np.ndarray, sr: int = 16000) -> dict:
     """
-    Calculates frame-by-frame spectral flux. Detects splicing, concatenation,
-    or diffusion model chunk discontinuities.
+    Calculates frame-by-frame spectral flux across active speech segments.
+    Detects splicing, concatenation, or diffusion model chunk discontinuities.
+    Excludes silence-to-speech transitions to prevent false alarms on natural plosives.
     """
     frame_size = 512
     hop_size = 256
     
     if len(audio) < frame_size * 2:
-        return {"spectral_flux_mean": 0.2, "discontinuity_detected": False, "discontinuity_score": 0.1}
+        return {"spectral_flux_mean": 0.25, "discontinuity_detected": False, "discontinuity_score": 0.12}
 
-    # Consecutive frame spectra
     num_frames = (len(audio) - frame_size) // hop_size
     spectra = []
+    energies = []
     for i in range(num_frames):
         st = i * hop_size
-        windowed = audio[st:st + frame_size] * np.hanning(frame_size)
-        spec = np.abs(rfft(windowed))
+        frame = audio[st:st + frame_size]
+        rms = np.sqrt(np.mean(frame ** 2))
+        energies.append(rms)
+        spec = np.abs(rfft(frame * np.hanning(frame_size)))
         norm = np.linalg.norm(spec) + 1e-6
         spectra.append(spec / norm)
         
     if len(spectra) < 2:
-        return {"spectral_flux_mean": 0.2, "discontinuity_detected": False, "discontinuity_score": 0.1}
+        return {"spectral_flux_mean": 0.25, "discontinuity_detected": False, "discontinuity_score": 0.12}
         
-    spectra = np.array(spectra)
-    fluxes = np.linalg.norm(np.diff(spectra, axis=0), axis=1)
-    
-    flux_mean = float(np.mean(fluxes))
-    flux_max = float(np.max(fluxes)) if len(fluxes) > 0 else 0.0
-    
-    # Anomaly condition: sharp discontinuous jump between consecutive speech frames
-    discontinuity_score = min(1.0, max(0.0, (flux_max - 0.75) / 0.5)) if flux_max > 0.75 else 0.1
-    discontinuity_flag = flux_max > 0.85
-    
+    # Evaluate flux between consecutive speech frames (avoiding silence/plosive onset false alarms)
+    fluxes = []
+    for i in range(1, len(spectra)):
+        if energies[i] > 0.015 and energies[i - 1] > 0.015:
+            fluxes.append(float(np.linalg.norm(spectra[i] - spectra[i - 1])))
+            
+    if not fluxes:
+        flux_mean = 0.35
+        flux_max = 0.50
+    else:
+        flux_mean = float(np.mean(fluxes))
+        flux_max = float(np.max(fluxes))
+        
+    # Natural human phoneme shifts average 0.30 - 0.52 flux.
+    # Discontinuity anomaly: abnormally high average flux (>0.65) or severe spliced discontinuity (>1.28).
+    if flux_mean > 0.65 or flux_max > 1.28:
+        discontinuity_score = min(1.0, max(0.12, (flux_mean - 0.50) / 0.30))
+        discontinuity_flag = True
+    else:
+        discontinuity_score = 0.12
+        discontinuity_flag = False
+        
     return {
         "spectral_flux_mean": round(flux_mean, 3),
         "spectral_flux_max": round(flux_max, 3),
@@ -310,10 +342,12 @@ def extract_high_freq_vocoder_metrics(audio: np.ndarray, sr: int = 16000) -> dic
     """
     Detects neural vocoder high-frequency artifacts:
     - Brickwall cutoff above 7.0 - 7.5 kHz (common in 22.05/24kHz trained TTS models)
-    - Sub-band harmonic ripple and phase dispersion in the 6 - 8 kHz region.
+    - High-frequency comb-filtering ripple spikes in the 6.5 - 7.8 kHz region.
+    Uses spectral crest factor (peak-to-mean) to distinguish vocoder comb spikes from
+    natural human breathiness, fricatives ('s', 'sh'), and high-pitched speech.
     """
     if len(audio) < 512:
-        return {"vocoder_cutoff_detected": False, "high_freq_ratio": 0.15, "vocoder_layer_score": 0.1}
+        return {"vocoder_cutoff_detected": False, "high_freq_ratio": 0.15, "crest_factor": 2.5, "vocoder_layer_score": 0.12}
 
     fft_vals = np.abs(rfft(audio * np.hanning(len(audio))))
     freqs = rfftfreq(len(audio), 1.0 / sr)
@@ -328,64 +362,82 @@ def extract_high_freq_vocoder_metrics(audio: np.ndarray, sr: int = 16000) -> dic
     # Ratio of high to mid energy
     hf_ratio = float(high_energy / (mid_energy + 1e-6))
     
+    # Spectral crest factor in high band
+    high_vals = fft_vals[high_band] if np.any(high_band) else np.array([1.0])
+    crest_factor = float(np.max(high_vals) / (np.mean(high_vals) + 1e-7))
+    
     # Abnormal conditions:
     # 1. Extreme brickwall drop: high energy drops by > 35dB relative to mid (typical of TTS cutoff)
-    # 2. Elevated vocoder buzz: high energy has unnatural harmonic resonance peaks (hf_ratio > 0.35)
+    # 2. Elevated vocoder buzz: comb-filtering harmonic spikes (hf_ratio > 0.40 AND crest_factor > 8.5)
     is_brickwall = hf_ratio < 0.0008
-    is_vocoder_buzz = hf_ratio > 0.35
+    is_vocoder_buzz = bool(hf_ratio > 0.40 and crest_factor > 8.5)
     
     if is_brickwall:
         score = 0.85  # Strong synthetic tell (band-limited neural generation)
     elif is_vocoder_buzz:
-        score = 0.80  # Neural vocoder artifact
+        score = 0.80  # Neural vocoder harmonic comb artifact
     else:
-        score = 0.15  # Natural human spectral slope
+        score = 0.12  # Natural human spectral slope
         
     return {
         "vocoder_cutoff_detected": bool(is_brickwall or is_vocoder_buzz),
         "high_freq_ratio": round(hf_ratio, 5),
+        "crest_factor": round(crest_factor, 2),
         "vocoder_layer_score": round(score, 3)
     }
 
 
 def extract_harmonic_to_noise_ratio(audio: np.ndarray, sr: int = 16000) -> dict:
     """
-    Estimates Harmonic-to-Noise Ratio (HNR).
-    Natural human voiced phonemes have dynamic HNR (12 - 25 dB) with micro-variations.
-    Artificial voices frequently have mathematically rigid HNR or phase-smearing noise.
+    Estimates Harmonic-to-Noise Ratio (HNR) across voiced speech phonemes.
+    Natural human conversational speech exhibits dynamic HNR (6 - 25 dB) with micro-variations.
+    Artificial voices frequently have mathematically rigid HNR or phase-smearing noise (<4 dB).
     """
     if len(audio) < 1024:
-        return {"hnr_db": 15.0, "hnr_anomaly_score": 0.2}
+        return {"hnr_db": 15.0, "hnr_anomaly_score": 0.15}
 
-    corr = np.correlate(audio, audio, mode='full')
-    corr = corr[len(corr)//2:]
-    
-    min_lag = int(sr / 400.0)
+    frame_sz = 512
+    hop_sz = 256
+    min_lag = int(sr / 650.0)
     max_lag = int(sr / 65.0)
-    
-    if len(corr) <= max_lag:
-        return {"hnr_db": 15.0, "hnr_anomaly_score": 0.2}
 
-    peak_lag = np.argmax(corr[min_lag:max_lag]) + min_lag
-    peak_val = corr[peak_lag]
-    zero_val = corr[0]
-    
-    if peak_val <= 0 or zero_val <= peak_val:
-        return {"hnr_db": 12.0, "hnr_anomaly_score": 0.3}
+    hnr_list = []
+    num_frames = (len(audio) - frame_sz) // hop_sz
+    for i in range(num_frames):
+        st = i * hop_sz
+        frame = audio[st:st + frame_sz]
+        rms = np.sqrt(np.mean(frame ** 2))
+        if rms < 0.02:
+            continue
+            
+        raw_c = np.correlate(frame, frame, mode='full')[len(frame)-1:]
+        weights = np.arange(len(frame), 0, -1)
+        unb_c = raw_c / weights
+        
+        if len(unb_c) > max_lag:
+            p_lag = np.argmax(unb_c[min_lag:max_lag]) + min_lag
+            r_p = unb_c[p_lag]
+            r_0 = unb_c[0]
+            if r_p > 0.40 * r_0:
+                noise = max(1e-5, r_0 - r_p)
+                hnr_val = 10.0 * np.log10(r_p / noise)
+                hnr_list.append(hnr_val)
 
-    # HNR = 10 * log10(R(T) / (R(0) - R(T)))
-    noise_energy = max(1e-6, zero_val - peak_val)
-    hnr = 10.0 * np.log10(peak_val / noise_energy)
-    hnr = float(np.clip(hnr, -5.0, 35.0))
+    if not hnr_list:
+        mean_hnr = 14.0
+    else:
+        mean_hnr = float(np.mean(hnr_list))
+        
+    mean_hnr = float(np.clip(mean_hnr, -5.0, 35.0))
 
-    # Anomaly condition: unnaturally low HNR for voiced frame (<6dB) or unrealistically high (>30dB)
-    if hnr > 30.0 or hnr < 6.0:
+    # Anomaly condition: unnaturally low HNR for voiced speech (<4.0 dB) or unrealistically high (>32.0 dB)
+    if mean_hnr < 4.0 or mean_hnr > 32.0:
         hnr_anomaly = 0.75
     else:
-        hnr_anomaly = 0.15
+        hnr_anomaly = 0.12
 
     return {
-        "hnr_db": round(hnr, 2),
+        "hnr_db": round(mean_hnr, 2),
         "hnr_anomaly_score": round(hnr_anomaly, 3)
     }
 
