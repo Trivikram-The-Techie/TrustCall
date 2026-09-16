@@ -72,30 +72,34 @@ export default function LiveWaveform({ isStreaming, audioEnergy = 0, isSynthetic
   }, [isStreaming, audioEnergy, isSynthetic]);
 
   return (
-    <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 shadow-xl">
-      <div className="flex items-center justify-between mb-2">
+    <div className="glass-card rounded-2xl p-4.5 shadow-2xl border border-slate-700/50">
+      <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center space-x-2">
-          <div className={`p-1.5 rounded-md ${isStreaming ? 'bg-blue-600/20 text-blue-400' : 'bg-slate-800 text-slate-500'}`}>
+          <div className={`p-1.5 rounded-xl border transition-all ${
+            isStreaming 
+              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 glow-cyan' 
+              : 'bg-slate-800/60 text-slate-500 border-slate-700/60'
+          }`}>
             <Volume2 className="w-4 h-4" />
           </div>
-          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
             Real-Time Spectral Waveform
           </span>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className={`inline-block w-2 h-2 rounded-full ${isStreaming ? 'bg-emerald-400 animate-ping' : 'bg-slate-600'}`} />
-          <span className="text-[11px] font-mono text-slate-400">
+        <div className="flex items-center space-x-2 bg-slate-900/80 px-2.5 py-1 rounded-full border border-slate-800">
+          <span className={`inline-block w-2 h-2 rounded-full ${isStreaming ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+          <span className="text-[10px] font-mono font-bold text-slate-300">
             {isStreaming ? 'INGESTING 16kHz PCM' : 'STANDBY'}
           </span>
         </div>
       </div>
 
-      <div className="w-full bg-[#0B0F19] rounded-lg p-2 border border-slate-900">
+      <div className="w-full bg-[#080C15] rounded-xl p-2 border border-slate-800/80 shadow-inner">
         <canvas
           ref={canvasRef}
           width={600}
           height={80}
-          className="w-full h-20 rounded"
+          className="w-full h-20 rounded-lg"
         />
       </div>
 

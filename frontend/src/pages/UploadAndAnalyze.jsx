@@ -116,13 +116,15 @@ export default function UploadAndAnalyze() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-[#111827] border border-slate-800 rounded-xl p-5 shadow-xl">
-        <h2 className="text-lg font-bold text-slate-100 flex items-center space-x-2">
-          <UploadCloud className="w-5 h-5 text-blue-400" />
-          <span>Upload & Forensic Audio Analysis</span>
+      <div className="glass-card rounded-2xl p-5 shadow-2xl border border-slate-700/50">
+        <h2 className="text-lg font-extrabold text-slate-100 flex items-center space-x-2.5">
+          <div className="p-2 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 glow-cyan">
+            <UploadCloud className="w-5 h-5 text-cyan-400" />
+          </div>
+          <span className="font-mono tracking-tight">Upload & Forensic Audio Analysis</span>
         </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Submit pre-recorded phone conversations or voice messages (WAV, MP3, OGG) for comprehensive multi-signal synthetic speech inspection.
+        <p className="text-xs text-slate-400 mt-1.5 font-medium">
+          Submit pre-recorded phone conversations or voice messages (WAV, MP3, OGG) for comprehensive multi-signal synthetic speech inspection via AASIST-L.
         </p>
       </div>
 
@@ -133,10 +135,10 @@ export default function UploadAndAnalyze() {
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+            className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer glass-card-hover ${
               dragOver
-                ? 'border-blue-500 bg-blue-500/10'
-                : 'border-slate-800 hover:border-slate-700 bg-[#111827]'
+                ? 'border-cyan-400 bg-cyan-500/10 glow-cyan'
+                : 'border-slate-700/70 hover:border-cyan-500/50 glass-card'
             }`}
           >
             <input
@@ -147,13 +149,13 @@ export default function UploadAndAnalyze() {
               className="hidden"
             />
             <label htmlFor="audioFileInput" className="cursor-pointer flex flex-col items-center">
-              <div className="w-12 h-12 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-600/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 mb-3 shadow-lg shadow-cyan-500/20 glow-cyan">
                 <FileAudio className="w-6 h-6" />
               </div>
-              <span className="text-sm font-semibold text-slate-200">
+              <span className="text-sm font-bold text-slate-200">
                 {file ? file.name : 'Choose audio file or drag & drop'}
               </span>
-              <span className="text-[11px] text-slate-500 mt-1">
+              <span className="text-[11px] text-slate-400 font-mono mt-1">
                 WAV, MP3, FLAC, AAC (max 25MB)
               </span>
             </label>
@@ -161,17 +163,17 @@ export default function UploadAndAnalyze() {
 
           {/* Audio Player Preview */}
           {audioPreviewUrl && (
-            <div className="bg-[#111827] border border-slate-800 p-3 rounded-xl">
-              <span className="text-[11px] font-mono text-slate-400 block mb-2">AUDIO PLAYBACK PREVIEW</span>
-              <audio controls src={audioPreviewUrl} className="w-full h-9 rounded" />
+            <div className="glass-card border border-slate-700/50 p-3.5 rounded-2xl shadow-xl">
+              <span className="text-[10px] font-mono font-bold text-slate-400 block mb-2 tracking-wider uppercase">AUDIO PLAYBACK PREVIEW</span>
+              <audio controls src={audioPreviewUrl} className="w-full h-9 rounded-lg" />
             </div>
           )}
 
           {/* Optional Transcript / Context Hints */}
-          <div className="bg-[#111827] border border-slate-800 rounded-xl p-4 space-y-3">
+          <div className="glass-card border border-slate-700/50 rounded-2xl p-4.5 space-y-3 shadow-xl">
             <div>
-              <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5 mb-1.5">
-                <FileText className="w-3.5 h-3.5 text-slate-400" />
+              <label className="text-xs font-bold text-slate-300 flex items-center space-x-1.5 mb-1.5 font-mono">
+                <FileText className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Call Transcript / Scam Phrases (Optional)</span>
               </label>
               <textarea
@@ -179,7 +181,7 @@ export default function UploadAndAnalyze() {
                 onChange={(e) => setTranscript(e.target.value)}
                 rows={3}
                 placeholder="e.g., Transfer money now to avoid arrest, share your OTP code..."
-                className="w-full bg-[#0B0F19] border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#080C15] border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
               />
             </div>
 
@@ -189,9 +191,9 @@ export default function UploadAndAnalyze() {
                 id="unknownNumberCheck"
                 checked={isUnknownNumber}
                 onChange={(e) => setIsUnknownNumber(e.target.checked)}
-                className="rounded border-slate-700 text-blue-600 bg-slate-900 focus:ring-0"
+                className="rounded border-slate-700 text-cyan-600 bg-slate-900 focus:ring-0"
               />
-              <label htmlFor="unknownNumberCheck" className="text-xs text-slate-300">
+              <label htmlFor="unknownNumberCheck" className="text-xs text-slate-300 font-medium">
                 Flag as first-time unknown caller number
               </label>
             </div>
@@ -199,12 +201,12 @@ export default function UploadAndAnalyze() {
             <button
               onClick={handleAnalyze}
               disabled={!file || isAnalyzing}
-              className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-extrabold tracking-wide transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 border border-blue-400/30"
             >
               {isAnalyzing ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Extracting Features & Analyzing...</span>
+                  <span>Extracting Features & Running AASIST-L...</span>
                 </>
               ) : (
                 <>

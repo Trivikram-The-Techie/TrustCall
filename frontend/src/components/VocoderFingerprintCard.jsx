@@ -35,15 +35,15 @@ export default function VocoderFingerprintCard({ fingerprint }) {
   };
 
   return (
-    <div className="bg-[#111827] border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+    <div className="glass-card rounded-2xl p-5 shadow-2xl border border-slate-700/50 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div className="flex items-center space-x-2.5">
-          <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30">
+          <div className="p-2 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 glow-cyan">
             <Fingerprint className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
               Neural Vocoder & Synthesis Architecture Profiler
             </h3>
             <p className="text-[11px] text-slate-400">
