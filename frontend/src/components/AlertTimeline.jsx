@@ -6,49 +6,53 @@ export default function AlertTimeline({ events = [] }) {
     switch (tier) {
       case 'Critical':
         return {
-          bg: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
+          bg: 'bg-rose-50 text-rose-900 border-rose-300',
+          textColor: 'text-rose-900',
           icon: ShieldX
         };
       case 'High':
         return {
-          bg: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
+          bg: 'bg-orange-50 text-orange-900 border-orange-300',
+          textColor: 'text-orange-900',
           icon: ShieldAlert
         };
       case 'Medium':
         return {
-          bg: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+          bg: 'bg-amber-50 text-amber-900 border-amber-300',
+          textColor: 'text-amber-900',
           icon: AlertTriangle
         };
       default:
         return {
-          bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+          bg: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+          textColor: 'text-emerald-900',
           icon: CheckCircle
         };
     }
   };
 
   return (
-    <div className="bg-[#111827] border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col h-full">
-      <div className="flex items-center justify-between mb-3">
+    <div className="glass-card rounded-2xl p-5 shadow-sm border border-[#E6E0D2] flex flex-col h-full">
+      <div className="flex items-center justify-between mb-3 border-b border-[#E6E0D2] pb-2.5">
         <div className="flex items-center space-x-2">
-          <div className="p-1.5 rounded-md bg-indigo-500/20 text-indigo-400">
+          <div className="p-1.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 shadow-sm">
             <History className="w-4 h-4" />
           </div>
-          <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-[#1C1917] uppercase tracking-wider font-mono">
             Alert & Audit Timeline
           </h3>
         </div>
-        <span className="text-[11px] font-mono text-slate-400">
+        <span className="text-[10px] font-mono font-bold text-[#78716C] bg-stone-100 px-2.5 py-0.5 rounded-full border border-stone-200">
           PRIVACY ENFORCED (NO RAW AUDIO STORED)
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-h-64 space-y-2.5 pr-1 mt-2">
+      <div className="flex-1 overflow-y-auto max-h-64 space-y-2.5 pr-1 mt-1">
         {events.length === 0 ? (
-          <div className="h-44 flex flex-col items-center justify-center text-slate-500 text-xs border border-dashed border-slate-800 rounded-lg p-4">
-            <CheckCircle className="w-8 h-8 text-slate-600 mb-2" />
-            <p>No threat anomalies or alerts logged yet.</p>
-            <p className="text-[11px] text-slate-600 mt-1">Streaming session clean.</p>
+          <div className="h-40 flex flex-col items-center justify-center text-[#78716C] text-xs border border-dashed border-[#DDD5C5] rounded-xl p-4 bg-[#FBF9F5]">
+            <CheckCircle className="w-7 h-7 text-emerald-600 mb-2" />
+            <p className="font-semibold text-[#44403C]">No threat anomalies or alerts logged yet.</p>
+            <p className="text-[11px] text-[#78716C] mt-0.5">Streaming session is clean.</p>
           </div>
         ) : (
           events.slice().reverse().map((evt, idx) => {
@@ -61,21 +65,21 @@ export default function AlertTimeline({ events = [] }) {
             return (
               <div
                 key={idx}
-                className="bg-[#0B0F19] p-3 rounded-lg border border-slate-800/80 flex items-start space-x-3 transition-all hover:border-slate-700"
+                className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E8E2D6] flex items-start space-x-3 transition-all hover:border-[#D4CBBF] shadow-sm"
               >
-                <div className={`p-1 rounded border mt-0.5 ${badge.bg}`}>
+                <div className={`p-1.5 rounded-lg border mt-0.5 shrink-0 ${badge.bg}`}>
                   <Icon className="w-3.5 h-3.5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-bold uppercase tracking-wider ${badge.bg.split(' ')[1]}`}>
+                    <span className={`text-xs font-bold uppercase tracking-wider ${badge.textColor}`}>
                       {evt.alert_tier || evt.verdict} Alert — Score: {evt.risk_score}
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">
+                    <span className="text-[10px] font-mono text-[#78716C]">
                       {timeStr}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-snug">
+                  <p className="text-xs text-[#292524] leading-snug">
                     {evt.explanation || evt.message || 'Threat detection threshold crossed'}
                   </p>
                 </div>
@@ -85,9 +89,9 @@ export default function AlertTimeline({ events = [] }) {
         )}
       </div>
 
-      <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono text-slate-500">
+      <div className="mt-3 pt-2.5 border-t border-[#E6E0D2] flex items-center justify-between text-[11px] font-mono text-[#78716C]">
         <span>Session TTL: 300s</span>
-        <span className="text-emerald-400">Cryptographic Salt Active</span>
+        <span className="text-emerald-700 font-bold">Cryptographic Salt Active</span>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Fingerprint, Activity, Zap, CheckCircle2, AlertOctagon } from 'lucide-react';
+import { Fingerprint, CheckCircle2, AlertOctagon } from 'lucide-react';
 
 export default function VocoderFingerprintCard({ fingerprint }) {
   if (!fingerprint) return null;
@@ -23,49 +23,49 @@ export default function VocoderFingerprintCard({ fingerprint }) {
 
   const getArchBadgeStyle = (arch) => {
     if (arch.includes('Organic Human')) {
-      return 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40';
+      return 'bg-emerald-50 text-emerald-900 border-emerald-300';
     }
     if (arch.includes('Diffusion')) {
-      return 'bg-purple-950/40 text-purple-300 border-purple-500/40';
+      return 'bg-purple-50 text-purple-900 border-purple-300';
     }
     if (arch.includes('HiFi-GAN') || arch.includes('Vocoder')) {
-      return 'bg-rose-950/40 text-rose-300 border-rose-500/40';
+      return 'bg-rose-50 text-rose-900 border-rose-300';
     }
-    return 'bg-cyan-950/40 text-cyan-300 border-cyan-500/40';
+    return 'bg-stone-100 text-stone-900 border-stone-300';
   };
 
   return (
-    <div className="glass-card rounded-2xl p-5 shadow-2xl border border-slate-700/50 space-y-4">
+    <div className="glass-card rounded-2xl p-5 shadow-sm border border-[#E6E0D2] space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+      <div className="flex items-center justify-between border-b border-[#E6E0D2] pb-3">
         <div className="flex items-center space-x-2.5">
-          <div className="p-2 rounded-xl bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 glow-cyan">
+          <div className="p-2 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 shadow-sm">
             <Fingerprint className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+            <h3 className="text-xs font-bold text-[#1C1917] uppercase tracking-wider font-mono">
               Neural Vocoder & Synthesis Architecture Profiler
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-[#78716C]">
               Fingerprints underlying generative speech model artifacts
             </p>
           </div>
         </div>
         <div className="text-right">
-          <span className="text-[10px] text-slate-500 block font-mono uppercase">Fingerprint Match</span>
-          <span className="text-xs font-mono font-bold text-slate-300">
+          <span className="text-[10px] text-[#78716C] block font-mono uppercase">Fingerprint Match</span>
+          <span className="text-xs font-mono font-bold text-[#1C1917]">
             {Math.round(confidence * 100)}% Match
           </span>
         </div>
       </div>
 
       {/* Primary Detected Architecture Box */}
-      <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${getArchBadgeStyle(primary_architecture)}`}>
+      <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 shadow-sm ${getArchBadgeStyle(primary_architecture)}`}>
         <div className="flex items-center space-x-2.5 min-w-0">
           {isSynthetic ? (
-            <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0" />
+            <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0" />
           ) : (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0" />
           )}
           <div className="truncate">
             <span className="text-[10px] block uppercase font-bold tracking-wider opacity-75">
@@ -79,13 +79,13 @@ export default function VocoderFingerprintCard({ fingerprint }) {
       </div>
 
       {/* Forensic Summary */}
-      <p className="text-xs text-slate-300 leading-relaxed bg-[#0B0F19] p-3 rounded-lg border border-slate-800/80">
+      <p className="text-xs text-[#292524] leading-relaxed bg-[#F5F2EB] p-3 rounded-xl border border-[#E0D8CA]">
         {fingerprint_summary}
       </p>
 
       {/* Architecture Probability Distribution Bars */}
       <div className="space-y-2 pt-1">
-        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+        <span className="text-[10px] text-[#57534E] uppercase font-bold tracking-wider block">
           Architecture Probability Distribution
         </span>
         <div className="space-y-1.5">
@@ -94,19 +94,19 @@ export default function VocoderFingerprintCard({ fingerprint }) {
             return (
               <div key={arch} className="space-y-0.5">
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-slate-300 truncate font-mono">{arch}</span>
-                  <span className="text-slate-400 font-mono font-semibold ml-2">{pct}%</span>
+                  <span className="text-[#1C1917] truncate font-mono font-medium">{arch}</span>
+                  <span className="text-[#78716C] font-mono font-semibold ml-2">{pct}%</span>
                 </div>
-                <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                <div className="w-full bg-[#EAE5DA] h-1.5 rounded-full overflow-hidden border border-[#DDD6C8]">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       arch.includes('Organic')
-                        ? 'bg-emerald-400'
+                        ? 'bg-emerald-600'
                         : arch.includes('Diffusion')
-                        ? 'bg-purple-500'
+                        ? 'bg-purple-600'
                         : arch.includes('HiFi-GAN')
-                        ? 'bg-rose-500'
-                        : 'bg-cyan-500'
+                        ? 'bg-rose-600'
+                        : 'bg-sky-600'
                     }`}
                     style={{ width: `${pct}%` }}
                   />
@@ -118,18 +118,18 @@ export default function VocoderFingerprintCard({ fingerprint }) {
       </div>
 
       {/* Diagnostic Signal Telemetry */}
-      <div className="grid grid-cols-3 gap-2 pt-1">
-        <div className="bg-[#0B0F19] p-2 rounded-lg border border-slate-800 text-center">
-          <span className="text-[9px] text-slate-500 block uppercase font-mono">Comb Ripple</span>
-          <span className="text-xs font-mono font-bold text-slate-200">{comb_ripple_index}</span>
+      <div className="grid grid-cols-3 gap-2.5 pt-1">
+        <div className="bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E6E0D2] text-center shadow-sm">
+          <span className="text-[9px] text-[#78716C] block uppercase font-mono font-bold">Comb Ripple</span>
+          <span className="text-xs font-mono font-black text-[#1C1917]">{comb_ripple_index}</span>
         </div>
-        <div className="bg-[#0B0F19] p-2 rounded-lg border border-slate-800 text-center">
-          <span className="text-[9px] text-slate-500 block uppercase font-mono">Phase Continuity</span>
-          <span className="text-xs font-mono font-bold text-slate-200">{phase_continuity_index}</span>
+        <div className="bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E6E0D2] text-center shadow-sm">
+          <span className="text-[9px] text-[#78716C] block uppercase font-mono font-bold">Phase Continuity</span>
+          <span className="text-xs font-mono font-black text-[#1C1917]">{phase_continuity_index}</span>
         </div>
-        <div className="bg-[#0B0F19] p-2 rounded-lg border border-slate-800 text-center">
-          <span className="text-[9px] text-slate-500 block uppercase font-mono">Pitch Flatness</span>
-          <span className="text-xs font-mono font-bold text-slate-200">{pitch_stability_index}</span>
+        <div className="bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E6E0D2] text-center shadow-sm">
+          <span className="text-[9px] text-[#78716C] block uppercase font-mono font-bold">Pitch Flatness</span>
+          <span className="text-xs font-mono font-black text-[#1C1917]">{pitch_stability_index}</span>
         </div>
       </div>
     </div>
