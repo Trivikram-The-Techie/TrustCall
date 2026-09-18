@@ -126,9 +126,20 @@ if __name__ == "__main__":
     genuine_path = os.path.join(out_dir, "genuine_call_sample.wav")
     cloned_path = os.path.join(out_dir, "cloned_scam_sample.wav")
     
-    genuine_audio = generate_natural_human_sample(duration_sec=4.5)
+    # Check if benchmark conversational speech is accessible
+    use_benchmark = False
+    try:
+        import librosa
+        libri_path = librosa.example('libri1')
+        audio_bench, sr_bench = librosa.load(libri_path, sr=16000)
+        genuine_audio = audio_bench[:int(4.5 * 16000)]
+        genuine_audio = genuine_audio / max(abs(genuine_audio).max(), 1e-6) * 0.8
+        use_benchmark = True
+    except Exception:
+        genuine_audio = generate_natural_human_sample(duration_sec=4.5)
+
     cloned_audio = generate_cloned_synthetic_sample(duration_sec=4.5)
     
     write_wav(genuine_path, genuine_audio)
     write_wav(cloned_path, cloned_audio)
-    print("Demo audio samples successfully generated!")
+    print(f"Demo audio samples successfully generated! (Benchmark source: {use_benchmark})")
