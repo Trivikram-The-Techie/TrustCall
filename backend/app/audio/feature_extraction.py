@@ -66,6 +66,36 @@ def decode_base64_audio(b64_str: str, target_sr: int = 16000) -> np.ndarray:
     return decode_audio_bytes(audio_bytes, target_sr=target_sr)
 
 
+# Global filterbank cache for real-time latency reduction
+_FILTERBANK_CACHE = {}
+
+def get_mel_filterbank(sr: int, n_fft: int, n_mels: int, num_freq_bins: int) -> np.ndarray:
+    key = (sr, n_fft, n_mels, num_freq_bins)
+    if key in _FILTERBANK_CACHE:
+        return _FILTERBANK_CACHE[key]
+        
+    mel_min = 0.0
+    mel_max = 2595.0 * np.log10(1.0 + (sr / 2.0) / 700.0)
+    mel_points = np.linspace(mel_min, mel_max, n_mels + 2)
+    hz_points = 700.0 * (10.0 ** (mel_points / 2595.0) - 1.0)
+    
+    bin_points = np.floor((n_fft + 1) * hz_points / sr).astype(int)
+    bin_points = np.clip(bin_points, 0, num_freq_bins - 1)
+    
+    fbank = np.zeros((n_mels, num_freq_bins), dtype=np.float32)
+    for m in range(1, n_mels + 1):
+        f_m_minus = bin_points[m - 1]
+        f_m = bin_points[m]
+        f_m_plus = bin_points[m + 1]
+        
+        if f_m > f_m_minus:
+            fbank[m - 1, f_m_minus:f_m] = (np.arange(f_m_minus, f_m) - f_m_minus) / (f_m - f_m_minus)
+        if f_m_plus > f_m:
+            fbank[m - 1, f_m:f_m_plus] = (f_m_plus - np.arange(f_m, f_m_plus)) / (f_m_plus - f_m)
+            
+    _FILTERBANK_CACHE[key] = fbank
+    return fbank
+
 def compute_log_mel_spectrogram(
     audio: np.ndarray, 
     sr: int = 16000, 
@@ -81,37 +111,16 @@ def compute_log_mel_spectrogram(
         # Pad short audio
         audio = np.pad(audio, (0, n_fft - len(audio)), mode='constant')
 
-    # STFT using ShortTimeFFT or spectrogram
-    window = np.hanning(n_fft)
-    freqs, times, Sxx = signal.spectrogram(
+    frequencies, times, Sxx = signal.spectrogram(
         audio, 
         fs=sr, 
-        window=window, 
+        window='hann', 
         nperseg=n_fft, 
         noverlap=n_fft - hop_length,
         mode='magnitude'
     )
     
-    # Mel filterbank construction
-    mel_min = 0.0
-    mel_max = 2595.0 * np.log10(1.0 + (sr / 2.0) / 700.0)
-    mel_points = np.linspace(mel_min, mel_max, n_mels + 2)
-    hz_points = 700.0 * (10.0 ** (mel_points / 2595.0) - 1.0)
-    
-    bin_points = np.floor((n_fft + 1) * hz_points / sr).astype(int)
-    bin_points = np.clip(bin_points, 0, Sxx.shape[0] - 1)
-    
-    fbank = np.zeros((n_mels, Sxx.shape[0]), dtype=np.float32)
-    for m in range(1, n_mels + 1):
-        f_m_minus = bin_points[m - 1]
-        f_m = bin_points[m]
-        f_m_plus = bin_points[m + 1]
-        
-        if f_m > f_m_minus:
-            fbank[m - 1, f_m_minus:f_m] = (np.arange(f_m_minus, f_m) - f_m_minus) / (f_m - f_m_minus)
-        if f_m_plus > f_m:
-            fbank[m - 1, f_m:f_m_plus] = (f_m_plus - np.arange(f_m, f_m_plus)) / (f_m_plus - f_m)
-            
+    fbank = get_mel_filterbank(sr, n_fft, n_mels, Sxx.shape[0])
     mel_spectrogram = np.dot(fbank, Sxx)
     mel_spectrogram = np.maximum(mel_spectrogram, 1e-6)
     log_mel = np.log10(mel_spectrogram)
