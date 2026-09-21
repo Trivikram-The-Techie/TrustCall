@@ -104,9 +104,11 @@ class ForensicEvidenceGenerator:
             "privacy_signature": embedding_hash or "HMAC-SHA256-ANONYMIZED-ACOUSTIC-FINGERPRINT",
             "recommended_action": rec_action,
             "legal_compliance": {
-                "standard": "Indian IT Act (Sec 65B & 66D Admissible Telemetry)",
+                "standard": "Indian Evidence Act / IT Act 2000 (Sec 65B & 66D Admissible Electronic Telemetry)",
                 "data_privacy": "Zero Raw Audio Stored (Ephemeral In-Memory Processing Only)",
-                "integrity_algorithm": "HMAC-SHA256 deterministic cryptographic binding"
+                "integrity_algorithm": "HMAC-SHA256 deterministic cryptographic binding",
+                "certifying_authority": "TrustCall / VoiceShield Automated Forensic Engine",
+                "admissibility_clause": "Certificate issued pursuant to Section 65B(4) Information Technology Act for digital audio forensic presentation."
             }
         }
 
