@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-26%2F26_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-27%2F27_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -24,6 +24,8 @@ Voice cloning technology powered by diffusion models and neural vocoders (e.g., 
 
 ## 2. Key Capabilities & Innovations
 
+- **Unified Audio Ingestion Hub**: Seamless all-in-one main page interface combining Channel 1 (Live Presets & Microphone) and Channel 2 (Drag-and-Drop Audio File Forensic Dropzone) with real-time biometric profiling.
+- **Warm Beige / Linen Executive Aesthetic**: High-end corporate styling featuring warm linen canvas (`#FAF8F5`), porcelain ivory glassmorphism (`rgba(255,255,255,0.90)`), deep espresso typography, and calibrated threat indicators.
 - **Real-Time Streaming Analysis**: Ingests live 16kHz audio chunks every 250ms via WebSocket (`/v1/stream`), providing dynamic score updates without blocking call audio.
 - **Deep Anti-Spoofing Architecture**: Features `AntiSpoofNet` powered by pre-trained **AASIST-L** (Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention Networks with SincNet raw filterbanks, achieving **0.99% EER** on the ASVspoof benchmark).
 - **Interactive Out-of-Band Challenge-Response Protocol**: Real-time reverse Turing test with dynamic 4-digit code generation. AI voice bots fail unpredictably on unpredictable dynamic codes due to TTS generation latency.
