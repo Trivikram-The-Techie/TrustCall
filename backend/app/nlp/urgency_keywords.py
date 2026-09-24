@@ -23,7 +23,12 @@ SCAM_DICTIONARY = {
             r"\b(upi\s+pin|enter\s+pin|pin\s+batao|share\s+pin)\b",
             r"\b(scan\s+qr\s+code|qr\s+code\s+scan\s+karo)\b",
             r"\b(immediate(ly)?\s+payment|pay\s+now|pay\s+within\s+\d+\s+min)\b",
-            r"\b(credit\s+card\s+limit|card\s+blocked|atm\s+card)\b"
+            r"\b(credit\s+card\s+limit|card\s+blocked|atm\s+card)\b",
+            # Regional Indian Languages (Telugu, Tamil, Marathi, Bengali)
+            r"\b(dabbu\s+pampandi|account\s+block\s+aindi|dabbu\s+ivvandi)\b",
+            r"\b(panam\s+anupunga|account\s+block\s+aagirukku|panam\s+kudunga)\b",
+            r"\b(paise\s+pathva|khata\s+bandh\s+zala|paise\s+dya)\b",
+            r"\b(taka\s+pathan|account\s+block\s+hoyeche|taka\s+din)\b"
         ]
     },
     "otp_credential_theft": {
@@ -32,7 +37,12 @@ SCAM_DICTIONARY = {
             r"\b(otp|one\s*time\s*password)\b",
             r"\b(otp\s+(share\s+karo|batao|bhejo|enter\s+karo|padho))\b",
             r"\b(share\s+(the\s+)?otp|tell\s+me\s+the\s+code|6\s*digit\s*code)\b",
-            r"\b(cvv\s*number|card\s*expiry)\b"
+            r"\b(cvv\s*number|card\s*expiry)\b",
+            # Regional Dialect OTP extraction
+            r"\b(otp\s+(cheppandi|ivvandi))\b",   # Telugu
+            r"\b(otp\s+(sollunga|kudunga))\b",   # Tamil
+            r"\b(otp\s+(dya|saanga))\b",         # Marathi
+            r"\b(otp\s+(din|bolun))\b"           # Bengali
         ]
     },
     "legal_impersonation_digital_arrest": {
@@ -45,7 +55,12 @@ SCAM_DICTIONARY = {
             r"\b(narcotics|customs\s+(department|seized|parcel))\b",
             r"\b(parcel\s+mein\s+(drugs|illegal|passport))\b",
             r"\b(fir\s+(register|lodged|file\s+ho\s+chuki))\b",
-            r"\b(jail\s+(jana\s+padega|bheja\s+jayega))\b"
+            r"\b(jail\s+(jana\s+padega|bheja\s+jayega))\b",
+            # Regional Legal Coercion
+            r"\b(police\s+case\s+aindi|arrest\s+chestham|jail\s+ki\s+veltharu)\b",       # Telugu
+            r"\b(kaval\s+thurai|police\s+case\s+aagirukku|arrest\s+pannuvom)\b",        # Tamil
+            r"\b(police\s+karwai|tatkal\s+dakhla|jail\s+madhe\s+jaava\s+lagel)\b",      # Marathi
+            r"\b(police\s+case\s+hoyeche|arrest\s+korbo|jail\s+hobe)\b"                 # Bengali
         ]
     },
     "secrecy_isolation_pressure": {
