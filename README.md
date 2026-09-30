@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-36%2F36_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-42%2F42_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -26,6 +26,9 @@ Voice cloning technology powered by diffusion models and neural vocoders (e.g., 
 
 - **Unified Audio Ingestion Hub**: Seamless all-in-one main page interface combining Channel 1 (Live Presets & Microphone) and Channel 2 (Drag-and-Drop Audio File Forensic Dropzone) with real-time biometric profiling.
 - **Warm Beige / Linen Executive Aesthetic**: High-end corporate styling featuring warm linen canvas (`#FAF8F5`), porcelain ivory glassmorphism (`rgba(255,255,255,0.90)`), deep espresso typography, and calibrated threat indicators.
+- **BNS & IT Act Scam Threat Taxonomy**: Automated classification into *Digital Arrest*, *Banking Credential Phishing*, *FedEx Narcotics Parcel*, and *Family Kidnapping* with legal mapping (BNS Sec 318/319 & IT Act Sec 66D).
+- **Telephony Codec Normalization**: Built-in DC-bias removal and bandpass equalization compensating for cellular AMR-NB, G.711, and Opus degradation.
+- **Enterprise SIEM & CEF Telemetry Export**: Real-time RFC-5424 Common Event Format (CEF) and Syslog JSON event streaming for corporate SOC triage.
 - **Asterisk ARI & FreePBX Telephony Bridge**: Connects directly to telecom trunks and enterprise PBX servers for automated call interception, in-band whisper warnings, and immediate fraud drops.
 - **Expanded Regional Indian Dialect Scam NLP**: Scans for fraud coercion across Hindi, Telugu (*"dabbu pampandi"*, *"police case"*), Tamil (*"account block aagirukku"*, *"OTP sollunga"*), Marathi (*"khata bandh zala"*), and Bengali (*"account block hoyeche"*).
 - **Enterprise Webhook Security**: RFC-2104 HMAC-SHA256 signature verification (`X-VoiceShield-Signature-256`) and timestamp replay protection for banking fraud triage centers.
