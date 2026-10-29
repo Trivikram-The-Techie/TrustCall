@@ -201,3 +201,25 @@ async def score_audio_file(
         offender_details=session_data.get("offender_details"),
         vocoder_fingerprint=fingerprint
     )
+
+@router.get("/benchmark")
+async def get_benchmark_results():
+    """
+    Returns empirical evaluation results, EER, and accuracy metrics across 11 telephony conditions.
+    Derived from evaluate_model_accuracy.py.
+    """
+    import json
+    from pathlib import Path
+    eval_file = Path(__file__).resolve().parent.parent.parent / "eval_results.json"
+    if not eval_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Benchmark evaluation results have not been generated yet. Run 'python backend/evaluate_model_accuracy.py' to produce them."
+        )
+    try:
+        with open(eval_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read benchmark results: {str(e)}")
+

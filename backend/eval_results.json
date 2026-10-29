@@ -1,0 +1,143 @@
+{
+  "timestamp": "2026-10-29T15:38:26.406521+00:00",
+  "model_architecture": "AASIST-L (Integrated Spectro-Temporal Graph Attention)",
+  "parameter_count": 85306,
+  "asvspoof_benchmark_eer_percent": 0.99,
+  "evaluation_dataset_note": "Evaluated on 30 benchmark-grounded and demonstration audio samples (15 genuine human conversational chunks, 15 synthetic voice clone chunks). Simulations apply deterministic DSP degradation (G.711 mu-law, AMR-NB, Opus, Packet Loss, Noise). For full population-scale telecommunications validation, tests should be expanded across full ASVspoof 2019/2021 eval sets.",
+  "total_conditions": 11,
+  "sample_count_per_condition": 30,
+  "results": [
+    {
+      "condition_id": "clean_16khz",
+      "condition_name": "Clean 16 kHz (Baseline)",
+      "description": "Uncompressed raw PCM audio at 16 kHz studio sampling rate.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 0.0,
+      "accuracy_percent": 83.33,
+      "optimal_threshold": 0.992,
+      "avg_latency_ms": 224.5
+    },
+    {
+      "condition_id": "g711_mulaw",
+      "condition_name": "G.711 (8 kHz mu-law)",
+      "description": "Standard PSTN cellular landline codec with 8-bit logarithmic companding.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 3.33,
+      "accuracy_percent": 53.33,
+      "optimal_threshold": 0.985,
+      "avg_latency_ms": 224.7
+    },
+    {
+      "condition_id": "amr_nb_bandlimited",
+      "condition_name": "AMR-NB (8 kHz, 300-3400 Hz)",
+      "description": "Narrowband mobile codec with aggressive 300-3400 Hz bandpass cutoff.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 6.67,
+      "accuracy_percent": 50.0,
+      "optimal_threshold": 0.997,
+      "avg_latency_ms": 215.1
+    },
+    {
+      "condition_id": "opus_low_bitrate",
+      "condition_name": "Opus Low-Bitrate (~12 kbps)",
+      "description": "VoIP CELT/SILK packet mode with 6 kHz bandwidth restriction.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 6.67,
+      "accuracy_percent": 66.67,
+      "optimal_threshold": 0.992,
+      "avg_latency_ms": 236.3
+    },
+    {
+      "condition_id": "mp3_roundtrip",
+      "condition_name": "MP3 Round-Trip Compression",
+      "description": "Perceptual MDCT psychoacoustic masking and high-frequency cutoff.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 0.0,
+      "accuracy_percent": 83.33,
+      "optimal_threshold": 0.986,
+      "avg_latency_ms": 239.3
+    },
+    {
+      "condition_id": "packet_loss_5pct",
+      "condition_name": "5% Random Packet Loss",
+      "description": "Cellular packet drops with G.711 Appendix I packet loss concealment (PLC).",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 0.0,
+      "accuracy_percent": 56.67,
+      "optimal_threshold": 0.993,
+      "avg_latency_ms": 252.0
+    },
+    {
+      "condition_id": "packet_loss_10pct",
+      "condition_name": "10% Random Packet Loss",
+      "description": "Severe cellular reception drops with repeated PLC frame attenuation.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 6.67,
+      "accuracy_percent": 50.0,
+      "optimal_threshold": 0.998,
+      "avg_latency_ms": 232.1
+    },
+    {
+      "condition_id": "additive_noise_20db",
+      "condition_name": "Additive Noise (20 dB SNR)",
+      "description": "Moderate ambient room / acoustic background noise.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 13.33,
+      "accuracy_percent": 70.0,
+      "optimal_threshold": 0.991,
+      "avg_latency_ms": 217.7
+    },
+    {
+      "condition_id": "additive_noise_10db",
+      "condition_name": "Additive Noise (10 dB SNR)",
+      "description": "High ambient street / public transport noise.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 6.67,
+      "accuracy_percent": 50.0,
+      "optimal_threshold": 0.997,
+      "avg_latency_ms": 221.2
+    },
+    {
+      "condition_id": "additive_noise_5db",
+      "condition_name": "Additive Noise (5 dB SNR)",
+      "description": "Extreme background acoustic noise (market / heavy traffic).",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 40.0,
+      "accuracy_percent": 50.0,
+      "optimal_threshold": 0.998,
+      "avg_latency_ms": 213.4
+    },
+    {
+      "condition_id": "chained_codec_case",
+      "condition_name": "Chained Worst-Case Telecom",
+      "description": "AMR-NB bandpass + 5% packet loss + 15 dB SNR background noise.",
+      "sample_count": 30,
+      "genuine_count": 15,
+      "spoof_count": 15,
+      "eer_percent": 0.0,
+      "accuracy_percent": 53.33,
+      "optimal_threshold": 0.991,
+      "avg_latency_ms": 214.8
+    }
+  ]
+}

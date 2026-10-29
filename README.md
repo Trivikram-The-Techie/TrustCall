@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-48%2F48_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-64%2F64_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -225,36 +225,103 @@ Open **http://localhost:5173** in your browser.
 
 ## 8. Demo Flow for Hackathon Judges
 
-1. **Preset A (Authentic Family Call)**:
+> ⚠️ **SIMULATED DEMO NOTICE**: The audio scenarios, preset numbers, carrier "DoT PKI" cryptographic badges, and automated banking webhooks below represent simulated proof-of-concept interactions engineered specifically for hackathon evaluation and technical auditing.
+
+1. **Preset A [SIMULATED DEMO: Authentic Family Call]**:
    - Click **Preset A: Family Call** (`+91 98401 22319`).
    - Observe the Risk Gauge remain in the safe **LOW** tier (12–16).
-   - Review the Carrier Credential badge: confirms `🛡️ VERIFIED (DoT PKI Signed)`.
+   - Review the Carrier Credential badge: confirms `🛡️ VERIFIED (DoT PKI Signed) [SIMULATED DEMO]`.
    - Explanation panel confirms natural human prosody, intonation CV, and living vocal fold tremor.
-2. **Preset B (SBI Bank Manager Debit Scam)**:
+2. **Preset B [SIMULATED DEMO: SBI Bank Manager Debit Scam]**:
    - Click **Preset B: SBI Manager Scam** (`+91 98201 44521`).
    - Observe the Risk Gauge immediately surge to **CRITICAL** (86/100).
-   - Acoustic alarm warning activates; telecom route shows `⚠️ INVALID / SPOOFED CID`.
+   - Acoustic alarm warning activates; telecom route shows `⚠️ INVALID / SPOOFED CID [SIMULATED DEMO]`.
    - Flags vocoder comb ripples (6.5–8 kHz) and financial coercion/OTP extortion keywords.
-3. **Preset C (CBI Digital Arrest Extortion Scam)**:
+3. **Preset C [SIMULATED DEMO: CBI Digital Arrest Extortion Scam]**:
    - Click **Preset C: CBI Arrest Scam** (`+91 91100 88231`).
    - Threat score hits **CRITICAL** (94/100) with cyber alarm warble siren.
    - Flags legal extortion and criminal coercion vectors with blacklisted VoIP route.
-4. **Interactive Out-of-Band Turing Challenge**:
+4. **Interactive Out-of-Band Turing Challenge [SIMULATED DEMO]**:
    - Instruct caller with the generated dynamic 4-digit code (e.g., `CODE: 8492`).
    - Click **Passed (Human)**: verifies living human response latency, dropping threat score to 12.
    - Click **Failed (Bot Hesitation)**: confirms TTS latency/evasion, locking session and firing bank fraud webhook.
 5. **Live Microphone Stream & Forensic Certificate**:
    - Click **Live Mic Stream** to test real-time voice ingest.
    - Click **Certificate** to generate and export court-admissible Section 65B forensic audit certificate.
+6. **Benchmarks Navigation Tab**:
+   - Click **Benchmarks (EER)** in the navigation bar to view empirical robustness metrics across 11 cellular conditions.
 
 ---
 
-## 9. Tested Performance & Evaluation
+## 9. Acoustic & Telephony Codec Benchmarks (Phase 1)
 
-On held-out evaluation test clips:
-- **Streaming Latency**: ~212ms end-to-end per chunk
-- **Feature Extraction Overhead**: <18ms on CPU
-- **Neural Model Inference**: <42ms on CPU (AASIST-L Graph Attention Network)
-- **Unit Test Coverage**: **26/26 tests passing (100%)** across audio processing, VAD chunking, neural inference, NLP keywords, forensic certificates, vocoder fingerprinting, and REST/WebSocket APIs.
-- **Production Build**: Clean Vite production bundle generated in 18.52s.
+> 🔬 **SIMULATED BENCHMARK CONDITIONS**: Evaluated using deterministic DSP telephony degradation modules in `backend/evaluate_model_accuracy.py` across 11 standard channel conditions. Every metric below is generated dynamically and served via `GET /v1/benchmark`.
+
+### Benchmark Results Table (AASIST-L, 85,306 parameters)
+*Evaluated on N = 30 samples per condition (15 genuine human conversational chunks + 15 synthetic clone chunks). Total 330 evaluations.*
+
+| Condition Name | Degradation Simulation | Sample Count | EER (%) | Accuracy (%) | Optimal $th^*$ | Avg Latency |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|
+| **Clean 16 kHz (Baseline)** | Uncompressed raw PCM studio audio | N = 30 | **0.00%** | **83.33%** | 0.992 | 224.5 ms |
+| **G.711 (8 kHz $\mu$-law)** | PSTN landline 8-bit companding & decimation | N = 30 | **3.33%** | **53.33%** | 0.985 | 224.7 ms |
+| **AMR-NB (8 kHz, 300–3400 Hz)** | Narrowband mobile codec bandpass cutoff | N = 30 | **6.67%** | **50.00%** | 0.997 | 215.1 ms |
+| **Opus Low-Bitrate (~12 kbps)** | VoIP CELT/SILK 6 kHz lowpass + MDCT quant. | N = 30 | **6.67%** | **66.67%** | 0.992 | 236.3 ms |
+| **MP3 Round-Trip** | Perceptual subband MDCT masking | N = 30 | **0.00%** | **83.33%** | 0.986 | 239.3 ms |
+| **5% Random Packet Loss** | 20ms frames with G.711 App I PLC attenuation | N = 30 | **0.00%** | **56.67%** | 0.993 | 252.0 ms |
+| **10% Random Packet Loss** | Severe packet drops with repeated PLC decay | N = 30 | **6.67%** | **50.00%** | 0.998 | 232.1 ms |
+| **Additive Noise (20 dB SNR)** | Ambient room background pink noise | N = 30 | **13.33%** | **70.00%** | 0.992 | 217.7 ms |
+| **Additive Noise (10 dB SNR)** | High street / transit acoustic noise | N = 30 | **6.67%** | **50.00%** | 0.996 | 221.2 ms |
+| **Additive Noise (5 dB SNR)** | Severe acoustic interference (market noise) | N = 30 | **40.00%** | **50.00%** | 0.998 | 213.4 ms |
+| **Chained Worst-Case Telecom** | AMR-NB + 5% packet loss + 15 dB SNR noise | N = 30 | **0.00%** | **53.33%** | 0.997 | 214.8 ms |
+
+### How to Reproduce Locally
+Run the standalone evaluation pipeline script:
+```bash
+python backend/evaluate_model_accuracy.py
+```
+This regenerates `backend/eval_results.json` directly from the raw audio samples and model forward passes. The live API serves this via `GET /v1/benchmark`.
+
+### Methodology & Limitations
+- **Dataset Scope**: Evaluated on N = 30 balanced demonstration and benchmark chunks. Population-scale validation across diverse accents and regional languages will be expanded using full ASVspoof 2019/2021 logical access splits.
+- **DSP Simulation**: Telephony channels (G.711, AMR-NB, Opus) are simulated with deterministic software DSP filters/companders rather than physical cellular baseband hardware.
+- **Acoustic Noise**: Evaluates stationary background noise profiles; dynamic cocktail-party multi-talker interference and heavy reverberation (RT60 > 500ms) will introduce additional spectral variation.
+
+---
+
+## 10. Red-Team Adversarial Evasion & Mitigation Lab (Phase 2)
+
+> ⚠️ **SIMULATED RED-TEAM ATTACK LAB**: Provides interactive stress testing of detection boundaries against physical and telecommunications attacks. All audio transformations and feature processing are executed strictly in-memory (zero audio persisted to disk).
+
+### Supported Attack Vectors
+
+1. **Lossy Codec Laundering (`codec_laundering`)**:
+   Pushes audio through G.711 $\mu$-law logarithmic companding, AMR-NB 8 kHz bandpass cutoff (300–3400 Hz) with ACELP harmonic saturation, or MP3 MDCT subband quantization to strip high-frequency vocoder cues.
+2. **RTP Packet Loss Concealment (`packet_loss`)**:
+   Simulates 5%, 10%, or 20% random packet drops with repeated frame attenuation (ITU-T G.711 Appendix I PLC).
+3. **Background Noise & Radio Music Mix (`noise_mix`)**:
+   Blends additive acoustic pink noise, multi-tone harmonic chords (simulating background music), or white noise at user-selectable SNR levels (5–25 dB).
+4. **Speaker-to-Mic Re-recording Simulation (`re_recording`)**:
+   Simulates physical acoustic replay on a loudspeaker captured by a phone microphone, utilizing synthetic Room Impulse Response (RIR) convolution across configurable room sizes (RT60: 200ms, 450ms, 800ms) plus speaker frequency coloration and ambient room hiss.
+5. **Silence & Segment Splicing (`splicing`)**:
+   A hybrid attack that interleaves authentic human speech chunks or silence gaps into synthetic clone audio (e.g., 50% real / 50% clone) to dilute standard rolling median temporal smoothers.
+
+### Active Defense: CUSUM & Max-Window Burst Robust Aggregator
+Standard temporal smoothers compute a rolling median over recent chunks. When an attacker splices authentic human voice or silence between cloned extortion bursts (e.g., `scores = [0.08, 0.98, 0.07]`), the median collapses to nominal human levels ($<0.20$), resulting in evasion.
+
+TrustCall implements a dual-path **Cumulative Sum (CUSUM) change-point detector** and **max-window pooling architecture**:
+$$S_t = \max\left(0, S_{t-1} + (s_t - (\mu_0 + k))\right)$$
+When a transient synthetic burst arrives ($s_t \approx 0.98$), the cumulative deviation $S_t$ immediately surges above threshold ($h = 0.45$), latching the threat alarm and restoring the active threat score ($85\text{--}90/100$) before the attacker's payload concludes.
+
+### API Endpoint
+- **`POST /v1/redteam/run`**: Takes `{ preset_id, audio_base64, attack_type, parameters }` and returns side-by-side metrics: original score, baseline attacked score (demonstrating evasion when bypassed), mitigated score (with CUSUM/burst defense), downsampled waveform envelopes (120 points), and spectral energy distributions.
+- **`GET /v1/redteam/presets`**: Returns available presets and attack parameter ranges.
+
+---
+
+## 11. Tested Performance & Verification
+
+- **Total Test Suite**: **64/64 unit and integration tests passing (100%)** across `backend/tests/` (including 8 red-team attack & CUSUM mitigation tests in `test_redteam.py`).
+- **Streaming Pipeline**: Sub-250ms end-to-end CPU inference latency per chunk.
+- **Frontend Bundle**: Clean Vite production build generated with zero warnings or errors.
+- **Zero Raw Audio Persisted**: All red-team transformations operate purely on NumPy arrays in memory.
 

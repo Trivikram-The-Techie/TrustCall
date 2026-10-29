@@ -14,6 +14,7 @@ from app.api.routes_score import router as score_router
 from app.api.routes_stream import router as stream_router
 from app.api.routes_alerts import router as alerts_router
 from app.api.routes_forensics import router as forensics_router
+from app.api.routes_redteam import router as redteam_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,6 +50,7 @@ app.include_router(score_router)
 app.include_router(stream_router)
 app.include_router(alerts_router)
 app.include_router(forensics_router)
+app.include_router(redteam_router)
 
 @app.get("/")
 async def root():

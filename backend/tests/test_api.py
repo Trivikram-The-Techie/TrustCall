@@ -53,3 +53,18 @@ def test_alerts_endpoint():
     data = response.json()
     assert "alerts" in data
     assert data["session_id"] == "test_session_123"
+
+def test_benchmark_endpoint():
+    response = client.get("/v1/benchmark")
+    assert response.status_code == 200
+    data = response.json()
+    assert "results" in data
+    assert len(data["results"]) >= 10
+    assert "model_architecture" in data
+    first = data["results"][0]
+    assert "condition_name" in first
+    assert "sample_count" in first
+    assert "eer_percent" in first
+    assert "accuracy_percent" in first
+    assert "avg_latency_ms" in first
+

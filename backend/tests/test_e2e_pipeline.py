@@ -142,8 +142,8 @@ def test_module_09_realtime_websocket_stream():
         assert handshake.get("event") == "connected"
         assert "session_id" in handshake
 
-        # Send 1 second of audio PCM
-        dummy_pcm = b"\x00\x00" * 16000
+        # Send 2 seconds of audio PCM (sufficient to fill 1.5s sliding analysis window)
+        dummy_pcm = b"\x00\x00" * 32000
         ws.send_bytes(dummy_pcm)
         telemetry = ws.receive_json()
         assert telemetry.get("event") == "score_update"

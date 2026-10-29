@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import LiveCallDemo from './pages/LiveCallDemo';
+import BenchmarksPage from './pages/BenchmarksPage';
+import RedTeamLab from './pages/RedTeamLab';
+import UploadAndAnalyze from './pages/UploadAndAnalyze';
+import IntegrationDocs from './pages/IntegrationDocs';
 import { ShieldCheck, Lock, EyeOff } from 'lucide-react';
 
 export default function App() {
   const [systemHealthy, setSystemHealthy] = useState(true);
+  const [activeTab, setActiveTab] = useState('live'); // 'live' | 'benchmarks' | 'upload' | 'docs'
 
   useEffect(() => {
     // Probe backend health check
@@ -19,10 +24,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FAF8F5] text-[#1C1917] flex flex-col justify-between selection:bg-amber-200 selection:text-amber-950">
       <div>
-        <Navbar systemHealthy={systemHealthy} />
+        <Navbar 
+          systemHealthy={systemHealthy} 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+        />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <LiveCallDemo />
+          {activeTab === 'live' && <LiveCallDemo />}
+          {activeTab === 'redteam' && <RedTeamLab />}
+          {activeTab === 'benchmarks' && <BenchmarksPage />}
+          {activeTab === 'upload' && <UploadAndAnalyze />}
+          {activeTab === 'docs' && <IntegrationDocs />}
         </main>
       </div>
 
