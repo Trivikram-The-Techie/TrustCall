@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-42%2F42_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-48%2F48_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -26,6 +26,9 @@ Voice cloning technology powered by diffusion models and neural vocoders (e.g., 
 
 - **Unified Audio Ingestion Hub**: Seamless all-in-one main page interface combining Channel 1 (Live Presets & Microphone) and Channel 2 (Drag-and-Drop Audio File Forensic Dropzone) with real-time biometric profiling.
 - **Warm Beige / Linen Executive Aesthetic**: High-end corporate styling featuring warm linen canvas (`#FAF8F5`), porcelain ivory glassmorphism (`rgba(255,255,255,0.90)`), deep espresso typography, and calibrated threat indicators.
+- **Adversarial Perturbation Guard**: Waveform sanitization and spectral kurtosis analysis that defeats adversarial noise injection and artificial dither masks.
+- **Packet Loss Concealment (PLC) Disambiguation**: Analyzes cellular RTP frame repetition and attenuation to eliminate false positive clone alerts caused by bad mobile reception.
+- **CERT-In & 1930 Cyber Helpline Incident Dispatcher**: Automated generation of MeitY-compliant cyber incident reports with SHA-256 evidence bags for law enforcement escalation.
 - **BNS & IT Act Scam Threat Taxonomy**: Automated classification into *Digital Arrest*, *Banking Credential Phishing*, *FedEx Narcotics Parcel*, and *Family Kidnapping* with legal mapping (BNS Sec 318/319 & IT Act Sec 66D).
 - **Telephony Codec Normalization**: Built-in DC-bias removal and bandpass equalization compensating for cellular AMR-NB, G.711, and Opus degradation.
 - **Enterprise SIEM & CEF Telemetry Export**: Real-time RFC-5424 Common Event Format (CEF) and Syslog JSON event streaming for corporate SOC triage.
