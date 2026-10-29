@@ -49,7 +49,7 @@ class CERTInIncidentDispatcher:
             "evidence_integrity": {
                 "algorithm": "HMAC-SHA256",
                 "cryptographic_signature": tamper_proof_sig,
-                "statutory_basis": "Indian Evidence Act Sec 65B(4) & IT Act Sec 66D"
+                "statutory_basis": "Indian Evidence Act Section 65B(4) & IT Act Section 66D"
             },
             "incident_summary": f"Real-time voice cloning attack intercepted. Risk Score: {risk_score}/100. Category: {threat_type}.",
             "transcript_evidence": transcript_snippet or "Transcript sanitized for evidentiary preservation.",
