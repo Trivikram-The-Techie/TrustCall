@@ -131,6 +131,16 @@ class EphemeralSessionStore:
         self._purge_expired()
         return self.sessions.get(session_id)
 
+from app.privacy.session_store_interface import (
+    BaseSessionStore,
+    InMemorySessionStore,
+    RedisSessionStore,
+    create_session_store
+)
+
+# Backward-compatibility alias
+EphemeralSessionStore = InMemorySessionStore
+
 # Global instances
 privacy_hasher = NonReversibleEmbeddingHasher()
-session_store = EphemeralSessionStore()
+session_store: BaseSessionStore = create_session_store()

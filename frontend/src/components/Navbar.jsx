@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Bell, BellRing, BellOff, PhoneCall, BarChart3, UploadCloud, BookOpen, Skull } from 'lucide-react';
+import { Shield, Bell, BellRing, BellOff, PhoneCall, BarChart3, UploadCloud, BookOpen, Skull, Cpu } from 'lucide-react';
 
 export default function Navbar({ systemHealthy = true, activeTab = 'live', setActiveTab }) {
   const [notifState, setNotifState] = useState('default');
@@ -31,6 +31,7 @@ export default function Navbar({ systemHealthy = true, activeTab = 'live', setAc
     { id: 'live', label: 'Live Shield', icon: PhoneCall },
     { id: 'redteam', label: 'Red-Team Lab', icon: Skull, badge: 'Stress' },
     { id: 'benchmarks', label: 'Benchmarks', icon: BarChart3, badge: 'EER' },
+    { id: 'scale', label: 'Scale', icon: Cpu, badge: '1M' },
     { id: 'upload', label: 'Upload & Score', icon: UploadCloud },
     { id: 'docs', label: 'API & Specs', icon: BookOpen }
   ];

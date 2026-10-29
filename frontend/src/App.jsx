@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import LiveCallDemo from './pages/LiveCallDemo';
 import BenchmarksPage from './pages/BenchmarksPage';
 import RedTeamLab from './pages/RedTeamLab';
+import ScalePage from './pages/ScalePage';
 import UploadAndAnalyze from './pages/UploadAndAnalyze';
 import IntegrationDocs from './pages/IntegrationDocs';
 import { ShieldCheck, Lock, EyeOff } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function App() {
           {activeTab === 'live' && <LiveCallDemo />}
           {activeTab === 'redteam' && <RedTeamLab />}
           {activeTab === 'benchmarks' && <BenchmarksPage />}
+          {activeTab === 'scale' && <ScalePage />}
           {activeTab === 'upload' && <UploadAndAnalyze />}
           {activeTab === 'docs' && <IntegrationDocs />}
         </main>

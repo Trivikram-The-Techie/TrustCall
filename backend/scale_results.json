@@ -1,0 +1,116 @@
+{
+  "timestamp": "2026-10-29T17:09:57Z",
+  "hardware": {
+    "cpu_cores_logical": 16,
+    "cpu_cores_physical": 10,
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python_version": "3.13.7"
+  },
+  "cascade_architecture": {
+    "stage1_screening_gate": "Fast Spectral Flatness & Vocoder Crest (<1.5ms)",
+    "stage2_heavy_model": "AASIST-L Integrated Spectro-Temporal Graph Attention",
+    "stage1_threshold": 0.35,
+    "periodic_audit_interval": 10,
+    "fail_open_timeout_ms": 150.0,
+    "fail_open_policy": "Zero call audio latency impact. Streaming audio is never buffered or blocked."
+  },
+  "concurrency_benchmarks": [
+    {
+      "concurrency": 5,
+      "total_chunks_processed": 40,
+      "wall_time_seconds": 1.78,
+      "p50_latency_ms": 12.05,
+      "p90_latency_ms": 470.33,
+      "p95_latency_ms": 812.73,
+      "p99_latency_ms": 814.24,
+      "mean_latency_ms": 112.64,
+      "stage1_mean_ms": 1.73,
+      "stage2_mean_ms": 593.64,
+      "cpu_utilization_pct": 97.3,
+      "stage2_escalated_chunks": 7,
+      "stage2_escalation_pct": 17.5,
+      "fail_open_count": 7,
+      "throughput_chunks_per_sec": 22.5,
+      "realtime_audio_factor": 33.7
+    },
+    {
+      "concurrency": 15,
+      "total_chunks_processed": 120,
+      "wall_time_seconds": 3.22,
+      "p50_latency_ms": 40.6,
+      "p90_latency_ms": 488.91,
+      "p95_latency_ms": 1475.75,
+      "p99_latency_ms": 1869.59,
+      "mean_latency_ms": 200.94,
+      "stage1_mean_ms": 2.93,
+      "stage2_mean_ms": 1130.42,
+      "cpu_utilization_pct": 99.8,
+      "stage2_escalated_chunks": 16,
+      "stage2_escalation_pct": 13.33,
+      "fail_open_count": 16,
+      "throughput_chunks_per_sec": 37.2,
+      "realtime_audio_factor": 55.8
+    },
+    {
+      "concurrency": 30,
+      "total_chunks_processed": 240,
+      "wall_time_seconds": 7.29,
+      "p50_latency_ms": 120.07,
+      "p90_latency_ms": 1870.64,
+      "p95_latency_ms": 3975.41,
+      "p99_latency_ms": 4256.25,
+      "mean_latency_ms": 573.12,
+      "stage1_mean_ms": 3.6,
+      "stage2_mean_ms": 2605.49,
+      "cpu_utilization_pct": 99.7,
+      "stage2_escalated_chunks": 35,
+      "stage2_escalation_pct": 14.58,
+      "fail_open_count": 35,
+      "throughput_chunks_per_sec": 32.9,
+      "realtime_audio_factor": 49.4
+    },
+    {
+      "concurrency": 50,
+      "total_chunks_processed": 400,
+      "wall_time_seconds": 11.4,
+      "p50_latency_ms": 285.1,
+      "p90_latency_ms": 3514.03,
+      "p95_latency_ms": 3919.69,
+      "p99_latency_ms": 4256.05,
+      "mean_latency_ms": 958.46,
+      "stage1_mean_ms": 2.65,
+      "stage2_mean_ms": 3167.73,
+      "cpu_utilization_pct": 100.0,
+      "stage2_escalated_chunks": 59,
+      "stage2_escalation_pct": 14.75,
+      "fail_open_count": 59,
+      "throughput_chunks_per_sec": 35.1,
+      "realtime_audio_factor": 52.6
+    }
+  ],
+  "million_calls_projection": {
+    "assumptions": {
+      "target_daily_calls": 1000000,
+      "average_call_duration_sec": 180,
+      "chunk_interval_sec": 1.5,
+      "chunks_per_call": 120,
+      "total_daily_chunks": 120000000,
+      "peak_hour_traffic_share_pct": 15.0,
+      "peak_hour_call_volume": 150000,
+      "peak_concurrent_streams": 7500,
+      "peak_chunks_per_second": 5000,
+      "target_cpu_headroom_pct": 70,
+      "measured_stage1_mean_ms": 2.73,
+      "measured_stage2_mean_ms": 1874.32,
+      "measured_stage2_trigger_rate_pct": 15.04
+    },
+    "results": {
+      "effective_ms_per_chunk_cascade": 284.63,
+      "effective_ms_per_chunk_without_cascade": 1874.32,
+      "cores_required_with_cascade": 2033.0,
+      "cores_required_without_cascade": 13388.0,
+      "compute_reduction_factor": "6.59x",
+      "fail_open_sla_ms": 150.0
+    }
+  }
+}

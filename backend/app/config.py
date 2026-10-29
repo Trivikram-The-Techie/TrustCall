@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # Rolling smoothing window size
     ROLLING_WINDOW_CHUNKS: int = 5
 
+    # Phase 4: Two-Stage Cascade & Scalability Settings
+    ENABLE_CASCADE: bool = True
+    CASCADE_STAGE1_THRESHOLD: float = 0.35      # Screening gate threshold triggering Stage 2
+    CASCADE_PERIODIC_INTERVAL: int = 10         # Background periodic surveillance (every K chunks)
+    CASCADE_FAIL_OPEN_TIMEOUT_MS: float = 150.0 # Strict fail-open budget (ms) for telecom safety
+    SESSION_STORE_BACKEND: str = "memory"       # "memory" | "redis"
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     model_config = SettingsConfigDict(env_prefix="TRUSTCALL_")
 
 settings = Settings()

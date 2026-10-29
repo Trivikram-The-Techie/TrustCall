@@ -15,10 +15,12 @@ from app.config import settings
 from app.audio.chunker import StreamingAudioBuffer, TemporalVoiceAccumulator
 from app.audio.feature_extraction import decode_audio_bytes, decode_base64_audio, extract_acoustic_features
 from app.models.spoof_detector import SpoofDetector
+from app.models.cascade_detector import CascadeSpoofDetector
 from app.nlp.urgency_keywords import urgency_scanner
 from app.nlp.transcriber import transcriber
 from app.models.risk_engine import risk_engine
 from app.privacy.embedding_store import privacy_hasher, session_store
+from app.monitoring.metrics import record_chunk_metrics, set_active_sessions
 
 router = APIRouter(prefix="/v1", tags=["Streaming"])
 
@@ -34,8 +36,11 @@ async def websocket_audio_stream(websocket: WebSocket):
     session_id = str(uuid.uuid4())
     audio_buffer = StreamingAudioBuffer(sample_rate=settings.SAMPLE_RATE)
     voice_accumulator = TemporalVoiceAccumulator(sample_rate=settings.SAMPLE_RATE, max_duration_sec=10.0)
-    # Use dedicated session detector instance for localized rolling smoothing
-    session_detector = SpoofDetector()
+    # Use two-stage cascade detector for scalable carrier-grade throughput
+    if settings.ENABLE_CASCADE:
+        session_detector = CascadeSpoofDetector()
+    else:
+        session_detector = SpoofDetector()
     
     caller_meta = {}
     current_transcript = ""
@@ -118,8 +123,9 @@ async def websocket_audio_stream(websocket: WebSocket):
                 # 2. Feature Extraction on Voiced Speech Window
                 features = extract_acoustic_features(eval_audio, sr=settings.SAMPLE_RATE)
                 
-                # 3. Neural Anti-Spoofing Inference with Rolling Smoothing
+                # 3. Neural Anti-Spoofing Inference with Rolling Smoothing (Two-Stage Cascade)
                 model_result = session_detector.predict_chunk(window, sr=settings.SAMPLE_RATE)
+                cascade_meta = model_result.get("cascade", {})
                 
                 # 4. Transcribe & Urgency Scan
                 nlp_result = urgency_scanner.scan_text(current_transcript)
@@ -133,6 +139,16 @@ async def websocket_audio_stream(websocket: WebSocket):
                     acoustic_features=features,
                     nlp_result=nlp_result,
                     caller_metadata=caller_meta
+                )
+
+                # Prometheus telemetry recording
+                record_chunk_metrics(
+                    total_seconds=cascade_meta.get("total_latency_ms", 5.0) / 1000.0,
+                    stage1_seconds=cascade_meta.get("stage1_latency_ms", 1.0) / 1000.0,
+                    stage2_seconds=cascade_meta.get("stage2_latency_ms", 0.0) / 1000.0,
+                    stage2_triggered=cascade_meta.get("stage2_triggered", True),
+                    is_fail_open=cascade_meta.get("fail_open", False),
+                    alert_tier=risk_eval["verdict"]
                 )
                 
                 # 7. Ephemeral Session Record
@@ -164,7 +180,8 @@ async def websocket_audio_stream(websocket: WebSocket):
                     "transcript_snippet": current_transcript,
                     "embedding_hash": emb_hash,
                     "accumulator": accum_stats,
-                    "layers": risk_eval.get("layers", {})
+                    "layers": risk_eval.get("layers", {}),
+                    "cascade": cascade_meta
                 })
 
     except WebSocketDisconnect:
@@ -174,3 +191,6 @@ async def websocket_audio_stream(websocket: WebSocket):
             await websocket.send_json({"event": "error", "message": str(e)})
         except Exception:
             pass
+    finally:
+        session_store.delete_session(session_id)
+        set_active_sessions(session_store.get_active_session_count())
