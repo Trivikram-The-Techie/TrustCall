@@ -3,7 +3,7 @@ import {
   Mic, MicOff, Play, AlertOctagon, PhoneOff, Phone, CheckCircle2, 
   Sparkles, RefreshCw, Activity, FileCheck, Volume2, VolumeX, 
   KeyRound, UserCheck, UserX, Building2, UploadCloud, FileAudio, FileText, Cpu,
-  Clock, AlertTriangle, ShieldCheck, ShieldAlert, Timer, Languages, StopCircle
+  Clock, AlertTriangle, ShieldCheck, ShieldAlert, Timer, Languages, StopCircle, Info
 } from 'lucide-react';
 import LiveWaveform from '../components/LiveWaveform';
 import RiskGauge from '../components/RiskGauge';
