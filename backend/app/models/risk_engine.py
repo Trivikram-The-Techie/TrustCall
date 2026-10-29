@@ -29,7 +29,8 @@ class RiskFusionEngine:
         model_result: Dict[str, Any],
         acoustic_features: Dict[str, Any],
         nlp_result: Dict[str, Any],
-        caller_metadata: Optional[Dict[str, Any]] = None
+        caller_metadata: Optional[Dict[str, Any]] = None,
+        challenge_result: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Evaluates risk score and constructs forensic explainability breakdown.
@@ -81,6 +82,15 @@ class RiskFusionEngine:
             # Cloned impersonation escalation
             raw_weighted_sum = max(raw_weighted_sum, 0.76)
 
+        # 2. Challenge-Response Dynamic Calibration:
+        if challenge_result:
+            if challenge_result.get("passed") is True:
+                # Caller passed dynamic challenge with organic human cognitive latency
+                raw_weighted_sum = min(raw_weighted_sum, 0.14)
+            elif challenge_result.get("passed") is False:
+                # Bot failed dynamic challenge (either wrong code or TTS latency spike)
+                raw_weighted_sum = max(raw_weighted_sum, 0.88)
+
         # Scale to 0-100
         risk_score = int(round(np_clip(raw_weighted_sum * 100.0, 0.0, 100.0)))
         
@@ -108,6 +118,12 @@ class RiskFusionEngine:
 
         # Generate Human-Centric Forensic Explanations
         reasons = []
+        if challenge_result:
+            if challenge_result.get("passed") is True:
+                reasons.append(f"Dynamic Challenge PASSED ({challenge_result.get('latency_ms')}ms latency): Code '{challenge_result.get('expected_code')}' verified with organic cognitive timing.")
+            else:
+                reasons.append(f"Dynamic Challenge FAILED: {challenge_result.get('explanation')}")
+
         if model_prob >= 0.60:
             reasons.append(f"Deep neural vocoder artifacts detected ({int(model_prob * 100)}% model confidence)")
         elif model_prob >= 0.40:

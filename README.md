@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-64%2F64_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-70%2F70_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -241,10 +241,12 @@ Open **http://localhost:5173** in your browser.
    - Click **Preset C: CBI Arrest Scam** (`+91 91100 88231`).
    - Threat score hits **CRITICAL** (94/100) with cyber alarm warble siren.
    - Flags legal extortion and criminal coercion vectors with blacklisted VoIP route.
-4. **Interactive Out-of-Band Turing Challenge [SIMULATED DEMO]**:
-   - Instruct caller with the generated dynamic 4-digit code (e.g., `CODE: 8492`).
-   - Click **Passed (Human)**: verifies living human response latency, dropping threat score to 12.
-   - Click **Failed (Bot Hesitation)**: confirms TTS latency/evasion, locking session and firing bank fraud webhook.
+4. **Automated Out-of-Band Challenge Protocol (Phase 3)**:
+   - Select variant (*Standard 4-Digits*, *Backwards*, *Hindi Words*, *Telugu Words*, or *Code + City*).
+   - Instruct caller with dynamic prompt (e.g. `CODE: 8492`).
+   - Click **Record Caller Answer (Microphone)** to automatically capture speech, measure physical speech-onset latency, and verify transcripts.
+   - Or click **Demo override: Human (680ms)** or **Demo override: Bot TTS Lag (2850ms)** to test both outcomes instantly.
+   - Observe the Latency Timeline and recalibrated Risk Score.
 5. **Live Microphone Stream & Forensic Certificate**:
    - Click **Live Mic Stream** to test real-time voice ingest.
    - Click **Certificate** to generate and export court-admissible Section 65B forensic audit certificate.
@@ -318,10 +320,39 @@ When a transient synthetic burst arrives ($s_t \approx 0.98$), the cumulative de
 
 ---
 
-## 11. Tested Performance & Verification
+## 11. Automated Out-of-Band Challenge-Response Protocol (Phase 3)
 
-- **Total Test Suite**: **64/64 unit and integration tests passing (100%)** across `backend/tests/` (including 8 red-team attack & CUSUM mitigation tests in `test_redteam.py`).
+> ⚠️ **SECURITY SCOPE & LIMITATION NOTICE**: A live human operator using a voice changer can pass this challenge; it specifically targets automated generative TTS pipelines and soundboards that cannot adapt to dynamic, unpredictable permutations in real time without noticeable synthesis lag.
+
+### Challenge Architecture & Variants
+Replaces manual buttons with an automated cognitive challenge engine:
+1. **Standard 4-Digits**: Random 4-digit code (e.g. `8492`).
+2. **Backwards Digits**: Code verbalized in reverse order (e.g. `8492` $\to$ `2948`), forcing cognitive re-ordering.
+3. **Hindi Word Numbers**: Code verbalized using Hindi numbers (e.g. `8492` $\to$ *"Aath Chaar Nau Do"* / *"आठ चार नौ दो"*).
+4. **Telugu Word Numbers**: Code verbalized using Telugu numbers (e.g. `8492` $\to$ *"Enimidi Naalugu Tommidi Rendu"* / *"ఎనిమిది నాలుగు తొమ్మిది రెండు"*).
+5. **Code + City**: Code followed by caller's current city name.
+
+### Acoustic Speech-Onset Latency Measurement & Classification
+Measures the physical latency from challenge completion to speech energy onset using sliding Voice Activity Detection (VAD):
+- **$350\text{--}1,800\text{ ms}$ (Human Natural)**: Typical cognitive comprehension and vocal tract initiation timing.
+- **$>2,200\text{ ms}$ (TTS Generative Lag)**: Excessive pipeline delay caused by LLM response generation, neural vocoder chunk synthesis, and audio buffering in automated attack scripts.
+- **$<250\text{ ms}$ (Unnaturally Fast)**: Potential pre-buffered soundboard replay.
+
+### Risk Engine Recalibration
+- **Challenge Passed**: Organic human latency and verified code drop the session risk score to **Low tier (10–14)**.
+- **Challenge Failed**: Latency spikes ($>2,200\text{ ms}$) or incorrect codes surge the session risk score to **Critical tier (88–96)** and record forensic evidence reasons.
+- **Demo Overrides**: Clearly labeled override buttons (`Demo override: Human (680ms)`, `Demo override: Bot TTS Lag (2850ms)`, `Demo override: Wrong Code`) allow hackathon judges to verify both execution branches instantly.
+
+### API Endpoints
+- **`GET /v1/challenge/generate?variant={variant}`**: Returns randomized code, verbal prompt text, and challenge ID.
+- **`POST /v1/challenge/verify`**: Accepts `{ challenge_id, audio_base64, transcript_text, client_latency_ms, demo_override }`, measures onset latency, verifies transcript correctness, and recalibrates the session threat score.
+
+---
+
+## 12. Tested Performance & Verification
+
+- **Total Test Suite**: **70/70 unit and integration tests passing (100%)** across `backend/tests/` (including 6 challenge and latency tests in `test_challenge.py`).
 - **Streaming Pipeline**: Sub-250ms end-to-end CPU inference latency per chunk.
 - **Frontend Bundle**: Clean Vite production build generated with zero warnings or errors.
-- **Zero Raw Audio Persisted**: All red-team transformations operate purely on NumPy arrays in memory.
+- **Zero Raw Audio Persisted**: All challenge audio is processed strictly in-memory and instantly released.
 
