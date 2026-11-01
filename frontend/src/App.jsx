@@ -5,6 +5,7 @@ import BenchmarksPage from './pages/BenchmarksPage';
 import RedTeamLab from './pages/RedTeamLab';
 import ScalePage from './pages/ScalePage';
 import BankWebhookPage from './pages/BankWebhookPage';
+import TrustCenterPage from './pages/TrustCenterPage';
 import UploadAndAnalyze from './pages/UploadAndAnalyze';
 import IntegrationDocs from './pages/IntegrationDocs';
 import { ShieldCheck, Lock, EyeOff } from 'lucide-react';
@@ -38,6 +39,7 @@ export default function App() {
           {activeTab === 'benchmarks' && <BenchmarksPage />}
           {activeTab === 'scale' && <ScalePage />}
           {activeTab === 'bank' && <BankWebhookPage />}
+          {activeTab === 'trust' && <TrustCenterPage />}
           {activeTab === 'upload' && <UploadAndAnalyze />}
           {activeTab === 'docs' && <IntegrationDocs />}
         </main>

@@ -22,6 +22,13 @@ class WebhookDispatchPayload(BaseModel):
     action: str = "TERMINATE_CALL_AND_LOCK_ACCOUNT"
     explanation: str
 
+class WebhookVerifyRequest(BaseModel):
+    payload: Dict[str, Any]
+    signature: str
+    timestamp: int
+    nonce: Optional[str] = None
+    max_skew_sec: Optional[int] = 300
+
 @router.get("/alerts")
 async def get_alerts_for_session(session_id: str = Query(..., description="Session identifier")):
     """
@@ -43,10 +50,10 @@ async def get_alerts_for_session(session_id: str = Query(..., description="Sessi
 async def trigger_bank_fraud_webhook(payload: WebhookDispatchPayload):
     """
     Dispatches automated fraud intervention alert to bank/PBX core banking gateway.
+    Includes cryptographic HMAC-SHA256 signature, timestamp, and unique replay-prevention nonce.
     """
-    # Cryptographic enterprise HMAC dispatch
     from app.security.webhook_auth import webhook_signer
-    sig, ts = webhook_signer.sign_payload(payload.model_dump())
+    sig, ts, nonce = webhook_signer.sign_payload_with_nonce(payload.model_dump())
 
     dispatch_record = {
         "dispatched": True,
@@ -57,9 +64,34 @@ async def trigger_bank_fraud_webhook(payload: WebhookDispatchPayload):
         "protocol": "HMAC_SIGNED_REST_V2",
         "signature": sig,
         "timestamp": ts,
-        "header_x_voiceshield_signature": f"t={ts},v1={sig}"
+        "nonce": nonce,
+        "header_x_voiceshield_signature": f"t={ts},v1={sig},nonce={nonce}"
     }
     return dispatch_record
+
+@router.post("/alerts/webhook/verify")
+async def verify_incoming_webhook(req: WebhookVerifyRequest):
+    """
+    Verifies incoming webhook authenticity and blocks replay attacks.
+    Validates HMAC signature, timestamp tolerance, and ensures nonce has not been consumed.
+    """
+    from app.security.webhook_auth import webhook_signer
+    is_valid = webhook_signer.verify_signature(
+        payload=req.payload,
+        signature=req.signature,
+        timestamp=req.timestamp,
+        nonce=req.nonce,
+        max_skew_sec=req.max_skew_sec or 300
+    )
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail="Webhook verification failed: Invalid signature, expired timestamp, or replayed nonce detected."
+        )
+    return {
+        "verified": True,
+        "message": "Signature verified, timestamp within tolerance, and nonce is fresh (not replayed)."
+    }
 
 @router.get("/demo/samples")
 async def get_demo_samples():

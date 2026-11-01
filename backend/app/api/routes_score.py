@@ -6,8 +6,9 @@ POST /v1/score/upload
 
 import uuid
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel, Field
+from app.security.rate_limiter import rate_limit
 
 from app.config import settings
 from app.audio.feature_extraction import (
@@ -52,7 +53,7 @@ class ScoreResponse(BaseModel):
     meta_sub_signals: Optional[dict] = None
     nlp_result: Optional[dict] = None
 
-@router.post("/score", response_model=ScoreResponse)
+@router.post("/score", response_model=ScoreResponse, dependencies=[Depends(rate_limit("score"))])
 async def score_audio_clip(payload: ScoreRequest):
     """
     Analyzes an audio clip provided as a base64 string.
@@ -139,7 +140,7 @@ async def score_audio_clip(payload: ScoreRequest):
     )
 
 
-@router.post("/score/upload", response_model=ScoreResponse)
+@router.post("/score/upload", response_model=ScoreResponse, dependencies=[Depends(rate_limit("score"))])
 async def score_audio_file(
     file: UploadFile = File(...),
     text_transcript: Optional[str] = Form(None),
@@ -148,17 +149,35 @@ async def score_audio_file(
 ):
     """
     Accepts multipart file upload (WAV, MP3, etc.), decodes, and runs full risk evaluation.
+    Enforces upload constraints: max file size, allowed MIME types, and constrained decoding.
     """
+    # 1. MIME type validation
+    if file.content_type and file.content_type.lower() not in settings.ALLOWED_AUDIO_MIME_TYPES:
+        filename = file.filename or ""
+        ext = filename.split(".")[-1].lower() if "." in filename else ""
+        if ext not in ["wav", "mp3", "ogg", "flac", "webm", "m4a", "mp4", "aac"]:
+            raise HTTPException(
+                status_code=415,
+                detail=f"Unsupported media type: '{file.content_type}'. Allowed types: {', '.join(settings.ALLOWED_AUDIO_MIME_TYPES)}"
+            )
+
     s_id = session_id or str(uuid.uuid4())
     content = await file.read()
-    
+
+    # 2. File size constraint
+    if len(content) > settings.MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Uploaded file size ({len(content)} bytes) exceeds maximum limit of {settings.MAX_UPLOAD_SIZE_BYTES // (1024*1024)} MB."
+        )
+
     try:
         audio = decode_audio_bytes(content, target_sr=settings.SAMPLE_RATE)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read audio file: {str(e)}")
 
     if len(audio) < 160:
-        raise HTTPException(status_code=400, detail="Audio file contains insufficient samples.")
+        raise HTTPException(status_code=400, detail="Audio file contains insufficient samples (minimum 10ms required).")
 
     # Features
     features = extract_acoustic_features(audio, sr=settings.SAMPLE_RATE)

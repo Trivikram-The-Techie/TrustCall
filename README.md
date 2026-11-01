@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-111%2F111_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-126%2F126_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -455,9 +455,51 @@ Fuses 4 distinct metadata sub-signals into an explainable reputation score:
 
 ---
 
-## 14. Tested Performance & Verification
+## 14. Enterprise Security Hardening & Threat Model (Phase 6)
 
-- **Total Test Suite**: **111/111 unit and integration tests passing (100%)** across `backend/tests/`:
+TrustCall is hardened to enterprise security standards to protect telephony infrastructure and user privacy:
+
+### 1. Enterprise Security Headers (Vercel & FastAPI)
+Verified via `curl -I http://127.0.0.1:8000/health`:
+- `Content-Security-Policy`: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; ...`
+- `Strict-Transport-Security`: `max-age=63072000; includeSubDomains; preload`
+- `X-Content-Type-Options`: `nosniff`
+- `X-Frame-Options`: `DENY`
+- `Referrer-Policy`: `strict-origin-when-cross-origin`
+- `Permissions-Policy`: `microphone=(self), camera=(), geolocation=()`
+
+### 2. Multi-Tier Rate Limiting
+In-memory sliding-window rate limiters per IP / API key prevent volumetric DoS attacks on compute-heavy models:
+- `POST /v1/score`: 60 requests / minute
+- `POST /v1/redteam/run`: 20 requests / minute
+- `WS /v1/stream`: 30 connection handshakes / minute
+
+### 3. Upload Constraints & Constrained Decoding
+- **Max File Size**: 15 MB enforced prior to read (HTTP 413).
+- **Max Audio Duration**: 120 seconds maximum ($16\text{ kHz} \times 120\text{s} = 1.92\text{M}$ samples).
+- **MIME Type Whitelist**: Strict audio validation (`audio/wav`, `audio/mpeg`, `audio/ogg`, etc.) rejecting non-audio binaries (HTTP 415).
+- **Safe Decoding**: Verification of RIFF headers, framerate sanity checks ($4,000 \le sr \le 192,000$), channel truncation, and automatic `NaN`/`Inf` sanitization.
+
+### 4. Webhook Verification with Cryptographic Nonce Store
+- **HMAC-SHA256**: RFC-2104 signature generation and constant-time verification (`hmac.compare_digest`).
+- **Timestamp Drift Tolerance**: Max 300-second window.
+- **Replay Protection**: Nonce store tracks and rejects previously consumed nonces within the active tolerance window (`POST /v1/alerts/webhook/verify`).
+
+### 5. API Key Auth & Restricted CORS
+- Optional institutional API key authentication on sensitive endpoints via `X-API-Key` or `Authorization: Bearer <key>`.
+- Configurable via `.env` (template in `.env.example`).
+- CORS strictly restricted to designated production and local development origins.
+
+### 6. Threat Model & Trust Center
+- Full threat modeling matrix documented in [`SECURITY.md`](SECURITY.md).
+- Interactive **Trust Center** page (`TrustCenterPage.jsx`) presenting DPDP Act 2023 compliance pillars, data flow diagrams, and data retention schedules.
+
+---
+
+## 15. Tested Performance & Verification
+
+- **Total Test Suite**: **126/126 unit and integration tests passing (100%)** across `backend/tests/`:
+  - 15 Phase 6 security hardening tests in `test_security_hardening.py` (Headers, Rate Limiting, Upload Limits, Webhook Nonce Replay, API Key Auth)
   - 30 Phase 5 metadata reputation, layered intent classifier, and alert tests in `test_metadata_signals.py`
   - 5 Two-stage cascade & fail-open tests in `test_cascade.py`
   - 4 Distributed session store tests in `test_session_store.py`
@@ -466,6 +508,6 @@ Fuses 4 distinct metadata sub-signals into an explainable reputation score:
   - 7 Red-team attack & burst mitigation tests in `test_redteam.py`
   - 7 Benchmark & baseline EER tests in `test_api.py`
   - 50 Comprehensive core acoustic, NLP, forensic, and security tests
-- **Frontend Bundle**: Vite production build compiled with 0 errors (`ScalePage.jsx`, `BankWebhookPage.jsx`, `BenchmarksPage.jsx`, `RedTeamLab.jsx`, `LiveCallDemo.jsx`).
+- **Frontend Bundle**: Vite production build compiled with 0 errors (`TrustCenterPage.jsx`, `ScalePage.jsx`, `BankWebhookPage.jsx`, `BenchmarksPage.jsx`, `RedTeamLab.jsx`, `LiveCallDemo.jsx`).
 - **Zero Raw Audio Persisted**: All streaming chunks, cascade features, and challenge samples are processed in memory and released immediately.
 

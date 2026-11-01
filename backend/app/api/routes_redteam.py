@@ -5,10 +5,11 @@ GET  /v1/redteam/presets
 """
 
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from app.redteam.redteam_runner import run_redteam_attack
+from app.security.rate_limiter import rate_limit
 
 router = APIRouter(prefix="/v1/redteam", tags=["Red-Team Lab"])
 
@@ -24,7 +25,7 @@ class RedTeamRequest(BaseModel):
         description="Attack specific parameters (e.g. codec, drop_rate, snr_db, room_size, splice_ratio)"
     )
 
-@router.post("/run")
+@router.post("/run", dependencies=[Depends(rate_limit("redteam"))])
 async def execute_redteam_attack(payload: RedTeamRequest):
     """
     Executes a red-team adversarial evasion attack on audio in-memory,

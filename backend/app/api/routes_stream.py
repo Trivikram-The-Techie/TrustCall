@@ -22,6 +22,7 @@ from app.models.risk_engine import risk_engine
 from app.models.number_reputation import number_reputation_engine
 from app.privacy.embedding_store import privacy_hasher, session_store
 from app.monitoring.metrics import record_chunk_metrics, set_active_sessions
+from app.security.rate_limiter import rate_limiter
 
 router = APIRouter(prefix="/v1", tags=["Streaming"])
 
@@ -32,6 +33,12 @@ async def websocket_audio_stream(websocket: WebSocket):
     Client sends binary PCM or JSON messages containing audio chunks.
     Server returns immediate risk score evaluations and alert updates.
     """
+    # Phase 6: Rate Limiting on WebSocket connection handshake
+    allowed, retry_after = rate_limiter.check_websocket(websocket, "stream")
+    if not allowed:
+        await websocket.close(code=4429, reason=f"Rate limit exceeded on /v1/stream. Retry after {retry_after}s.")
+        return
+
     await websocket.accept()
     
     session_id = str(uuid.uuid4())

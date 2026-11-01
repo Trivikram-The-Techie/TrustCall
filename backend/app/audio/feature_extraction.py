@@ -14,9 +14,19 @@ def decode_audio_bytes(audio_bytes: bytes, target_sr: int = 16000) -> np.ndarray
     """
     Decodes raw audio bytes (WAV or raw PCM 16-bit) to float32 numpy array normalized to [-1, 1]
     and resamples to target_sr if necessary.
+    Constrained for security: validates magic bytes, bounds duration, prevents decompression bombs,
+    and replaces non-finite values (NaN/Inf) with zeros.
     """
-    if len(audio_bytes) == 0:
+    if not audio_bytes or len(audio_bytes) == 0:
         return np.zeros(0, dtype=np.float32)
+
+    # Security check: Max upload size constraint
+    from app.config import settings
+    max_bytes = getattr(settings, "MAX_UPLOAD_SIZE_BYTES", 15 * 1024 * 1024)
+    if len(audio_bytes) > max_bytes:
+        raise ValueError(f"Audio payload size ({len(audio_bytes)} bytes) exceeds maximum allowable limit of {max_bytes} bytes.")
+
+    audio = None
 
     # Check for RIFF/WAV header
     if audio_bytes[:4] == b'RIFF':
@@ -26,7 +36,15 @@ def decode_audio_bytes(audio_bytes: bytes, target_sr: int = 16000) -> np.ndarray
                 sampwidth = wf.getsampwidth()
                 framerate = wf.getframerate()
                 n_frames = wf.getnframes()
-                raw_data = wf.readframes(n_frames)
+
+                # Guard against corrupted / bomb framerate
+                if framerate <= 0 or framerate > 192000:
+                    framerate = target_sr
+
+                # Cap max frames to prevent memory exhaustion
+                max_frames = int(framerate * getattr(settings, "MAX_AUDIO_DURATION_SEC", 120.0))
+                frames_to_read = min(n_frames, max_frames)
+                raw_data = wf.readframes(frames_to_read)
                 
                 if sampwidth == 2:
                     audio = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
@@ -37,32 +55,69 @@ def decode_audio_bytes(audio_bytes: bytes, target_sr: int = 16000) -> np.ndarray
                 else:
                     audio = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
 
-                if n_channels > 1:
-                    audio = audio.reshape(-1, n_channels).mean(axis=1)
+                if n_channels > 1 and len(audio) >= n_channels:
+                    # Truncate to multiple of channels before reshape
+                    trunc_len = len(audio) - (len(audio) % n_channels)
+                    audio = audio[:trunc_len].reshape(-1, n_channels).mean(axis=1)
 
                 if framerate != target_sr and len(audio) > 0:
                     num_samples = int(len(audio) * target_sr / framerate)
                     audio = signal.resample(audio, num_samples)
+        except Exception:
+            audio = None
 
-                return audio.astype(np.float32)
+    # Fallback: treat as raw 16-bit signed PCM mono
+    if audio is None:
+        try:
+            # Constrain buffer to multiple of 2 for int16
+            valid_len = len(audio_bytes) - (len(audio_bytes) % 2)
+            if valid_len > 0:
+                audio = np.frombuffer(audio_bytes[:valid_len], dtype=np.int16).astype(np.float32) / 32768.0
         except Exception:
             pass
 
-    # Treat as raw 16-bit signed PCM mono
-    try:
-        audio = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-        return audio
-    except Exception:
-        # Fallback float32
-        return np.frombuffer(audio_bytes, dtype=np.float32)
+    # Secondary fallback: float32 buffer
+    if audio is None:
+        try:
+            valid_len = len(audio_bytes) - (len(audio_bytes) % 4)
+            if valid_len > 0:
+                audio = np.frombuffer(audio_bytes[:valid_len], dtype=np.float32)
+        except Exception:
+            pass
+
+    if audio is None or len(audio) == 0:
+        return np.zeros(0, dtype=np.float32)
+
+    # Bound maximum duration to prevent long computation DoS
+    max_samples = int(target_sr * getattr(settings, "MAX_AUDIO_DURATION_SEC", 120.0))
+    if len(audio) > max_samples:
+        audio = audio[:max_samples]
+
+    # Security: Ensure array contains no NaN or Inf values
+    audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
+
+    return audio.astype(np.float32)
 
 
 def decode_base64_audio(b64_str: str, target_sr: int = 16000) -> np.ndarray:
-    """Decodes base64 encoded audio string to float32 numpy array."""
+    """Decodes base64 encoded audio string to float32 numpy array with security constraints."""
+    if not b64_str:
+        return np.zeros(0, dtype=np.float32)
+
+    from app.config import settings
+    max_b64_len = int((getattr(settings, "MAX_UPLOAD_SIZE_BYTES", 15 * 1024 * 1024) * 4 / 3) + 4096)
+    if len(b64_str) > max_b64_len:
+        raise ValueError(f"Base64 audio payload size ({len(b64_str)} chars) exceeds maximum allowable limit.")
+
     # Strip data URL prefix if present
     if ',' in b64_str:
         b64_str = b64_str.split(',', 1)[1]
-    audio_bytes = base64.b64decode(b64_str)
+
+    try:
+        audio_bytes = base64.b64decode(b64_str, validate=True)
+    except Exception as e:
+        raise ValueError(f"Malformed base64 audio encoding: {str(e)}")
+
     return decode_audio_bytes(audio_bytes, target_sr=target_sr)
 
 

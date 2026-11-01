@@ -8,6 +8,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from app.config import settings
 from app.api.routes_score import router as score_router
@@ -28,6 +31,35 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown cleanup if needed
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Injects enterprise security headers on all HTTP responses:
+    - Content-Security-Policy (with frame-ancestors none)
+    - Strict-Transport-Security (HSTS)
+    - X-Content-Type-Options: nosniff
+    - X-Frame-Options: DENY
+    - Referrer-Policy: strict-origin-when-cross-origin
+    - Permissions-Policy: microphone=(self)
+    """
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'wasm-unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob: https:; "
+            "media-src 'self' blob: data:; "
+            "connect-src 'self' ws: wss: http: https:; "
+            "font-src 'self' data:; "
+            "frame-ancestors 'none';"
+        )
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "microphone=(self), camera=(), geolocation=()"
+        return response
+
 app = FastAPI(
     title="TrustCall / VoiceShield API",
     version=settings.APP_VERSION,
@@ -35,12 +67,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration
+# Enterprise Security Headers Middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Restricted CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
