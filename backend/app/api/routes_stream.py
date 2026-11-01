@@ -16,9 +16,10 @@ from app.audio.chunker import StreamingAudioBuffer, TemporalVoiceAccumulator
 from app.audio.feature_extraction import decode_audio_bytes, decode_base64_audio, extract_acoustic_features
 from app.models.spoof_detector import SpoofDetector
 from app.models.cascade_detector import CascadeSpoofDetector
-from app.nlp.urgency_keywords import urgency_scanner
+from app.nlp.urgency_keywords import urgency_scanner, layered_scanner
 from app.nlp.transcriber import transcriber
 from app.models.risk_engine import risk_engine
+from app.models.number_reputation import number_reputation_engine
 from app.privacy.embedding_store import privacy_hasher, session_store
 from app.monitoring.metrics import record_chunk_metrics, set_active_sessions
 
@@ -68,6 +69,9 @@ async def websocket_audio_stream(websocket: WebSocket):
                     
                     if event_type == "set_metadata":
                         caller_meta = payload.get("metadata", {})
+                        caller_num = caller_meta.get("phone_number") or caller_meta.get("number")
+                        if caller_num:
+                            caller_meta.update(number_reputation_engine.evaluate(caller_num, caller_meta))
                         continue
                     elif event_type == "transcript_update":
                         current_transcript = payload.get("transcript", "")
@@ -127,8 +131,8 @@ async def websocket_audio_stream(websocket: WebSocket):
                 model_result = session_detector.predict_chunk(window, sr=settings.SAMPLE_RATE)
                 cascade_meta = model_result.get("cascade", {})
                 
-                # 4. Transcribe & Urgency Scan
-                nlp_result = urgency_scanner.scan_text(current_transcript)
+                # 4. Transcribe & Urgency Scan (Phase 5: Layered Intent Scanner)
+                nlp_result = layered_scanner.scan_text(current_transcript)
                 
                 # 5. Irreversible Hashing
                 emb_hash = privacy_hasher.generate_hash(window)
@@ -181,7 +185,9 @@ async def websocket_audio_stream(websocket: WebSocket):
                     "embedding_hash": emb_hash,
                     "accumulator": accum_stats,
                     "layers": risk_eval.get("layers", {}),
-                    "cascade": cascade_meta
+                    "cascade": cascade_meta,
+                    "meta_sub_signals": risk_eval.get("meta_sub_signals", {}),
+                    "nlp_result": nlp_result
                 })
 
     except WebSocketDisconnect:

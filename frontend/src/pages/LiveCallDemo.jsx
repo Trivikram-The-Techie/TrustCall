@@ -99,6 +99,14 @@ export default function LiveCallDemo() {
   const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Phase 5: Metadata sub-signals, intent, trusted alert
+  const [metaSubSignals, setMetaSubSignals] = useState({});
+  const [intentResult, setIntentResult] = useState(null);
+  const [evidencePhrases, setEvidencePhrases] = useState([]);
+  const [trustedAlertPayload, setTrustedAlertPayload] = useState(null);
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
+  const [transcriptText, setTranscriptText] = useState('');
+
   const handleToggleMute = () => {
     const nextState = toggleAudioMute();
     setIsMuted(nextState);
@@ -417,6 +425,8 @@ export default function LiveCallDemo() {
           if (data.components) setComponents(data.components);
           if (data.action_recommendation) setActionRecommendation(data.action_recommendation);
           if (data.rms_energy) setAudioEnergy(data.rms_energy);
+          // Phase 5
+          if (data.meta_sub_signals) setMetaSubSignals(data.meta_sub_signals);
 
           if (data.accumulator) setAccumulator(data.accumulator);
           if (data.layers) setLayers(data.layers);
@@ -501,6 +511,10 @@ export default function LiveCallDemo() {
               setActionRecommendation(evalResult.action_recommendation);
               if (evalResult.layers) setLayers(evalResult.layers);
               if (evalResult.vocoder_fingerprint) setVocoderFingerprint(evalResult.vocoder_fingerprint);
+              // Phase 5
+              if (evalResult.meta_sub_signals) setMetaSubSignals(evalResult.meta_sub_signals);
+              if (evalResult.nlp_result?.evidence_phrases) setEvidencePhrases(evalResult.nlp_result.evidence_phrases);
+              if (evalResult.nlp_result?.intent_class) setIntentResult({ intent_class: evalResult.nlp_result.intent_class, intent_confidence: evalResult.nlp_result.intent_confidence || 0 });
 
               triggerAudioAlert(evalResult.risk_score, evalResult.verdict);
 
@@ -551,7 +565,8 @@ export default function LiveCallDemo() {
 
     const isGenuine = type === 'genuine';
     const isSbi = type === 'sbi_scam';
-    const isCbi = type === 'cbi_scam' || (!isGenuine && !isSbi);
+    const isMetaScam = type === 'meta_scam';
+    const isCbi = type === 'cbi_scam' || (!isGenuine && !isSbi && !isMetaScam);
 
     if (isGenuine) {
       setCallerProfile({
@@ -571,6 +586,15 @@ export default function LiveCallDemo() {
         credentialBadge: 'INVALID / SPOOFED CID',
         credentialValid: false
       });
+    } else if (isMetaScam) {
+      setCallerProfile({
+        number: '+91 88000 12345',
+        name: 'Digital Arrest Threat (Blocklist Match)',
+        carrier: 'Virtual SIP Trunk / +91140 VoIP Range',
+        gateway: 'Cambodia Gateway (Burst: 6 calls / 5 min)',
+        credentialBadge: 'BLOCKLISTED CID + BURST ROUTE',
+        credentialValid: false
+      });
     } else {
       setCallerProfile({
         number: '+91 91100 88231',
@@ -583,13 +607,17 @@ export default function LiveCallDemo() {
     }
 
     const baseUrl = import.meta.env.BASE_URL || './';
-    const audioUrl = isGenuine ? `${baseUrl}static/genuine_call_sample.wav` : `${baseUrl}static/cloned_scam_sample.wav`;
+    const audioUrl = isGenuine || isMetaScam ? `${baseUrl}static/genuine_call_sample.wav` : `${baseUrl}static/cloned_scam_sample.wav`;
     let transcript = "Hey Rahul, are we still meeting tomorrow for the SIH project discussion at the lab? Let me know if you need any notes.";
     if (isSbi) {
       transcript = "This is Senior Manager Rajesh from State Bank of India Fraud Department. Your debit card has been blocked. Share OTP immediately or account will be frozen.";
+    } else if (isMetaScam) {
+      transcript = "Customs department has seized illegal courier package linked to your number. Pay immediate verification penalty or police case registered.";
     } else if (isCbi) {
       transcript = "This is Officer Sharma from Delhi Police Crime Branch. Your bank account is linked to an illegal money transfer. Share your OTP immediately or arrest warrant will be issued. Do not tell anyone.";
     }
+
+    setTranscriptText(transcript);
 
     try {
       let data = null;
@@ -615,9 +643,10 @@ export default function LiveCallDemo() {
               sample_rate: 16000,
               text_transcript: transcript,
               caller_metadata: {
+                phone_number: isMetaScam ? '+918800012345' : null,
                 is_unknown_number: !isGenuine,
                 is_voip_spoofed: !isGenuine,
-                claimed_entity: isSbi ? 'State Bank of India' : isCbi ? 'CBI Cyber Crime Cell' : null
+                claimed_entity: isSbi ? 'State Bank of India' : isCbi ? 'CBI Cyber Crime Cell' : isMetaScam ? 'Customs Narcotics' : null
               }
             })
           });
@@ -647,6 +676,33 @@ export default function LiveCallDemo() {
               prosodic_irregularity: 9.0,
               urgency_nlp: 0.0,
               caller_metadata: 0.0
+            }
+          };
+        } else if (isMetaScam) {
+          data = {
+            risk_score: 72,
+            verdict: 'High',
+            status_text: 'Metadata-Dominant Flag (Audio Score Low, Route Blacklisted)',
+            action_recommendation: 'Caution: Number is blocklisted for digital arrest fraud. Audio alone appears human.',
+            explanation: 'Number on blocklist: Digital Arrest Scam (47 reports) [SIMULATED DEMO]; VoIP gateway prefix (+91140); Call burst detected (6 calls in window); Natural voice prosody.',
+            forensic_reasons: [
+              'Number on blocklist: Digital Arrest Scam (47 reports) [SIMULATED DEMO]',
+              'Call burst: 6 calls in 300s window',
+              'VoIP gateway prefix detected (+91140 range)',
+              'Audio spoof confidence is low (11.5% - Natural vocal tract tremor)'
+            ],
+            components: {
+              model_confidence: 11.5,
+              spectral_discontinuity: 6.0,
+              prosodic_irregularity: 8.5,
+              urgency_nlp: 78.0,
+              caller_metadata: 88.0
+            },
+            meta_sub_signals: {
+              number_reputation: { listed: true, category: 'Digital Arrest Scam', reports: 47, score: 0.97, contribution: 34.0 },
+              call_burst_velocity: { call_count_in_window: 6, score: 0.8, contribution: 20.0 },
+              short_repeat_calls: { short_call_count: 3, score: 0.7, contribution: 14.0 },
+              voip_prefix: { is_voip: true, matched_prefix: '91140', score: 0.6, contribution: 12.0 }
             }
           };
         } else if (isSbi) {
@@ -702,6 +758,12 @@ export default function LiveCallDemo() {
       setComponents(data.components || {});
       setActionRecommendation(data.action_recommendation);
       setAudioEnergy(isGenuine ? 0.25 : 0.45);
+      // Phase 5
+      if (data.meta_sub_signals) setMetaSubSignals(data.meta_sub_signals);
+      if (data.transcript) setTranscriptText(data.transcript);
+      if (data.nlp_result?.evidence_phrases) setEvidencePhrases(data.nlp_result.evidence_phrases);
+      if (data.nlp_result?.intent_class) setIntentResult({ intent_class: data.nlp_result.intent_class, intent_confidence: data.nlp_result.intent_confidence || 0 });
+      setTrustedAlertPayload(null);
 
       triggerAudioAlert(data.risk_score, data.verdict);
 
@@ -877,6 +939,11 @@ export default function LiveCallDemo() {
       setComponents(data.components || {});
       setActionRecommendation(data.action_recommendation || 'Analysis completed.');
       setAudioEnergy(0.35);
+      // Phase 5
+      if (data.meta_sub_signals) setMetaSubSignals(data.meta_sub_signals);
+      if (data.nlp_result?.evidence_phrases) setEvidencePhrases(data.nlp_result.evidence_phrases);
+      if (data.nlp_result?.intent_class) setIntentResult({ intent_class: data.nlp_result.intent_class, intent_confidence: data.nlp_result.intent_confidence || 0 });
+      setTrustedAlertPayload(null);
 
       triggerAudioAlert(data.risk_score, data.verdict);
 
@@ -1019,11 +1086,11 @@ export default function LiveCallDemo() {
               <span className="text-[11px] font-mono font-bold text-[#57534E] uppercase tracking-wider block mb-2">
                 Channel 1: Live Simulation Presets & Microphone
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {/* Preset A */}
                 <button
                   onClick={() => runPresetSimulation('genuine')}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
                     isPlayingPreset === 'genuine'
                       ? 'bg-emerald-700 text-white border-emerald-800'
                       : 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
@@ -1037,7 +1104,7 @@ export default function LiveCallDemo() {
                 {/* Preset B */}
                 <button
                   onClick={() => runPresetSimulation('sbi_scam')}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
                     isPlayingPreset === 'sbi_scam'
                       ? 'bg-amber-700 text-white border-amber-800'
                       : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
@@ -1051,7 +1118,7 @@ export default function LiveCallDemo() {
                 {/* Preset C */}
                 <button
                   onClick={() => runPresetSimulation('cbi_scam')}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
                     isPlayingPreset === 'cbi_scam'
                       ? 'bg-rose-700 text-white border-rose-800'
                       : 'bg-rose-50 text-rose-900 border-rose-300 hover:bg-rose-100'
@@ -1062,10 +1129,25 @@ export default function LiveCallDemo() {
                   <span className="text-[10px] opacity-80 font-normal">CBI Arrest</span>
                 </button>
 
+                {/* Preset D (Phase 5: Metadata Flag) */}
+                <button
+                  onClick={() => runPresetSimulation('meta_scam')}
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
+                    isPlayingPreset === 'meta_scam'
+                      ? 'bg-purple-700 text-white border-purple-800'
+                      : 'bg-purple-50 text-purple-900 border-purple-300 hover:bg-purple-100'
+                  }`}
+                  title="Low audio spoof score, flagged primarily by blocklist and call-burst metadata"
+                >
+                  <PhoneCall className="w-4 h-4 mb-1 text-purple-600" />
+                  <span className="text-[11px] font-semibold leading-tight">Preset D</span>
+                  <span className="text-[10px] opacity-80 font-normal">Meta Scam</span>
+                </button>
+
                 {/* Live Mic */}
                 <button
                   onClick={toggleMicrophone}
-                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
+                  className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-bold border transition-all text-center shadow-sm ${
                     isMicActive
                       ? 'bg-indigo-700 text-white border-indigo-800 animate-pulse'
                       : 'bg-indigo-50 text-indigo-900 border-indigo-300 hover:bg-indigo-100'
@@ -1490,6 +1572,7 @@ export default function LiveCallDemo() {
             forensicReasons={forensicReasons}
             actionRecommendation={actionRecommendation}
             riskScore={riskScore}
+            metaSubSignals={metaSubSignals}
           />
 
           <VocoderFingerprintCard fingerprint={vocoderFingerprint} />
@@ -1500,6 +1583,121 @@ export default function LiveCallDemo() {
       <div className="w-full">
         <AlertTimeline events={events} />
       </div>
+
+      {/* Phase 5: Trusted Contact Alert Panel (shown when verdict is High or Critical) */}
+      {(verdict === 'High' || verdict === 'Critical') && (
+        <div className="w-full glass-card rounded-2xl border border-rose-300 bg-rose-50/60 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-rose-200">
+            <div className="flex items-center space-x-2.5">
+              <div className="p-2 rounded-xl bg-rose-100 border border-rose-300">
+                <AlertOctagon className="w-4 h-4 text-rose-700" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-rose-900 uppercase tracking-wider font-mono">
+                  Trusted Contact Alert — Phase 5
+                </h3>
+                <p className="text-[10px] text-rose-600 font-mono mt-0.5">
+                  ⚠ SIMULATED DEMO — No real message is sent
+                </p>
+              </div>
+            </div>
+            {!trustedAlertPayload && (
+              <button
+                onClick={async () => {
+                  setIsSendingAlert(true);
+                  try {
+                    const resp = await fetch('/v1/alert/trusted-contact', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        session_id: 'live-demo',
+                        risk_score: riskScore,
+                        verdict: verdict,
+                        caller_number: callerProfile.number,
+                        transcript_snippet: transcriptText?.slice(0, 120) || 'No transcript',
+                        detected_intent: intentResult?.intent_class || null,
+                      }),
+                    });
+                    const data = await resp.json();
+                    setTrustedAlertPayload(data);
+                  } catch (e) {
+                    setTrustedAlertPayload({ error: 'Failed to reach backend' });
+                  } finally {
+                    setIsSendingAlert(false);
+                  }
+                }}
+                disabled={isSendingAlert}
+                className="px-3 py-1.5 bg-rose-600 text-white text-xs font-mono font-bold rounded-xl hover:bg-rose-700 disabled:opacity-50 transition-colors"
+              >
+                {isSendingAlert ? 'Sending…' : 'Send Alert (DEMO)'}
+              </button>
+            )}
+          </div>
+
+          {/* Mock WhatsApp-style alert preview */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 bg-white border border-rose-200 rounded-xl p-4 shadow-sm">
+              <p className="text-[10px] font-mono font-bold text-rose-700 uppercase mb-2">Mock Alert Preview</p>
+              <div className="bg-[#DCF8C6] rounded-xl p-3 text-xs text-[#1C1917] font-mono space-y-1 shadow-inner">
+                <p className="font-bold">🚨 TrustCall SECURITY ALERT</p>
+                <p>Suspicious call on {callerProfile.number}</p>
+                <p>Risk: <strong>{verdict}</strong> ({riskScore}/100)</p>
+                <p>Intent: {intentResult?.intent_class || 'Unknown'}</p>
+                <p className="text-[#78716C]">→ Ask family to verify before sharing any details</p>
+              </div>
+              <div className="mt-2 text-[10px] text-rose-600 font-mono">
+                To: {/* settings.TRUSTED_CONTACT_MOCK_NAME */} Family Contact (Demo) — +91 9876543210
+              </div>
+            </div>
+
+            {trustedAlertPayload && !trustedAlertPayload.error && (
+              <div className="flex-1 bg-white border border-[#E6E0D2] rounded-xl p-4 shadow-sm overflow-auto max-h-48">
+                <p className="text-[10px] font-mono font-bold text-[#78716C] uppercase mb-2">API Response</p>
+                <pre className="text-[10px] text-[#1C1917] font-mono whitespace-pre-wrap">
+                  {JSON.stringify(trustedAlertPayload, null, 2)}
+                </pre>
+              </div>
+            )}
+            {trustedAlertPayload?.error && (
+              <div className="flex-1 bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-800 font-mono">
+                {trustedAlertPayload.error}
+              </div>
+            )}
+          </div>
+
+          {/* Intent & Evidence Phrases */}
+          {intentResult && intentResult.intent_class !== 'BENIGN' && (
+            <div className="mt-4 pt-3 border-t border-rose-200">
+              <p className="text-[10px] font-mono font-bold text-rose-700 uppercase mb-2">
+                Detected Intent: {intentResult.intent_class} ({(intentResult.intent_confidence * 100).toFixed(0)}% confidence)
+              </p>
+              {evidencePhrases.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {evidencePhrases.map((ep, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-0.5 bg-rose-100 border border-rose-300 text-rose-800 text-[11px] font-mono rounded-full"
+                      title={`Language: ${ep.language}`}
+                    >
+                      "{ep.text}"
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reset button */}
+          {trustedAlertPayload && (
+            <button
+              onClick={() => { setTrustedAlertPayload(null); }}
+              className="mt-3 text-[10px] text-rose-500 font-mono hover:text-rose-700 transition-colors"
+            >
+              Reset alert
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Forensic Report & Incident Audit Certificate Modal */}
       <ForensicReportModal

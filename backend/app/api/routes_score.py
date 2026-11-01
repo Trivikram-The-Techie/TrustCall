@@ -16,9 +16,10 @@ from app.audio.feature_extraction import (
     extract_acoustic_features
 )
 from app.models.spoof_detector import spoof_detector
-from app.nlp.urgency_keywords import urgency_scanner
+from app.nlp.urgency_keywords import urgency_scanner, layered_scanner
 from app.nlp.transcriber import transcriber
 from app.models.risk_engine import risk_engine
+from app.models.number_reputation import number_reputation_engine
 from app.privacy.embedding_store import privacy_hasher, session_store
 from app.models.vocoder_fingerprint import vocoder_fingerprinter
 
@@ -48,6 +49,8 @@ class ScoreResponse(BaseModel):
     is_repeat_offender: bool
     offender_details: Optional[dict] = None
     vocoder_fingerprint: Optional[dict] = None
+    meta_sub_signals: Optional[dict] = None
+    nlp_result: Optional[dict] = None
 
 @router.post("/score", response_model=ScoreResponse)
 async def score_audio_clip(payload: ScoreRequest):
@@ -78,17 +81,24 @@ async def score_audio_clip(payload: ScoreRequest):
         sr=settings.SAMPLE_RATE, 
         text_override=payload.text_transcript
     )
-    nlp_result = urgency_scanner.scan_text(transcript_text)
+    nlp_result = layered_scanner.scan_text(transcript_text)
     
     # 4. Non-reversible Hash Generation
     embedding_hash = privacy_hasher.generate_hash(audio)
     
+    # 4b. Metadata Reputation Processing (Phase 5)
+    caller_meta = dict(payload.caller_metadata) if payload.caller_metadata else {}
+    caller_number = caller_meta.get("phone_number") or caller_meta.get("number")
+    if caller_number:
+        rep_eval = number_reputation_engine.evaluate(caller_number, caller_meta)
+        caller_meta.update(rep_eval)
+
     # 5. Multi-Signal Fusion
     risk_eval = risk_engine.evaluate_risk(
         model_result=model_result,
         acoustic_features=features,
         nlp_result=nlp_result,
-        caller_metadata=payload.caller_metadata
+        caller_metadata=caller_meta if caller_meta else None
     )
     
     # 6. Vocoder Architecture Fingerprinting
@@ -123,7 +133,9 @@ async def score_audio_clip(payload: ScoreRequest):
         embedding_hash=embedding_hash,
         is_repeat_offender=session_data.get("is_repeat_offender", False),
         offender_details=session_data.get("offender_details"),
-        vocoder_fingerprint=fingerprint
+        vocoder_fingerprint=fingerprint,
+        meta_sub_signals=risk_eval.get("meta_sub_signals"),
+        nlp_result=nlp_result
     )
 
 
@@ -154,7 +166,7 @@ async def score_audio_file(
     model_result = spoof_detector.predict_chunk(audio, sr=settings.SAMPLE_RATE, use_history=False)
     # NLP
     transcript_text = transcriber.transcribe_chunk(audio, sr=settings.SAMPLE_RATE, text_override=text_transcript)
-    nlp_result = urgency_scanner.scan_text(transcript_text)
+    nlp_result = layered_scanner.scan_text(transcript_text)
     # Hash
     embedding_hash = privacy_hasher.generate_hash(audio)
     
@@ -199,7 +211,9 @@ async def score_audio_file(
         embedding_hash=embedding_hash,
         is_repeat_offender=session_data.get("is_repeat_offender", False),
         offender_details=session_data.get("offender_details"),
-        vocoder_fingerprint=fingerprint
+        vocoder_fingerprint=fingerprint,
+        meta_sub_signals=risk_eval.get("meta_sub_signals"),
+        nlp_result=nlp_result
     )
 
 @router.get("/benchmark")

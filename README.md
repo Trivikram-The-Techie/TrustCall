@@ -7,7 +7,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
 [![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4+-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![Tests](https://img.shields.io/badge/Test_Suite-81%2F81_Passed-success.svg)](https://pytest.org)
+[![Tests](https://img.shields.io/badge/Test_Suite-111%2F111_Passed-success.svg)](https://pytest.org)
 [![Privacy](https://img.shields.io/badge/Privacy-Zero_Raw_Audio_Stored-blue.svg)](#how-we-protect-privacy)
 
 > 🚀 **Live Interactive Demo**: [https://trivikram-the-techie.github.io/TrustCall/](https://trivikram-the-techie.github.io/TrustCall/)
@@ -423,9 +423,42 @@ Standard Prometheus text exposition format ready for Prometheus / Grafana scrapi
 
 ---
 
-## 13. Tested Performance & Verification
+## 13. Beyond Audio: Metadata Reputation, Layered Intent NLP & Trusted Alerts (Phase 5)
 
-- **Total Test Suite**: **81/81 unit and integration tests passing (100%)** across `backend/tests/`:
+TrustCall Phase 5 extends defense capabilities beyond pure acoustics into telecommunication metadata heuristics, multilingual intent understanding, and out-of-band defensive interventions:
+
+### 1. Caller Metadata Reputation Engine (`backend/app/models/number_reputation.py`)
+Fuses 4 distinct metadata sub-signals into an explainable reputation score:
+- **Local Synthetic Blocklist (`backend/data/blocklist.json`)**: Pre-populated with synthetic scam numbers categorized by modus operandi (*Digital Arrest Scam*, *Bank Impersonation*, *KYC/OTP Theft*). *Labelled SIMULATED DEMO.*
+- **Call-Burst Velocity Tracking**: Rolling in-memory sliding window tracking call frequency ($>4\text{ calls in } 300\text{s}$ flags automated autodialer/telecom botnet sweeps).
+- **Short Repeated Call Detection**: Tracks repeated call completions $<15\text{s}$ typical of predatory robocalls and probe attempts.
+- **VoIP Prefix Heuristics**: Detects unassigned non-geographic and VoIP gateway trunks (e.g., $+91140$, $+9161$, $+1646$).
+- **Configurable Fusion Sub-Weights (`backend/app/config.py`)**:
+  ```python
+  META_WEIGHT_NUMBER_REPUTATION = 0.35
+  META_WEIGHT_CALL_BURST_VELOCITY = 0.25
+  META_WEIGHT_SHORT_REPEAT_CALLS = 0.20
+  META_WEIGHT_VOIP_PREFIX = 0.20
+  ```
+- **Metadata-Dominant Detection Demo**: Preset D demonstrates a scenario where audio features appear normal / human ($<15\%$ spoof confidence), but the call is escalated to **High** risk based on blocklist history and velocity flags.
+
+### 2. Layered Multilingual Intent Classifier (`backend/app/nlp/intent_classifier.py`)
+- Runs **100% locally with zero paid API keys or external dependencies** via vectorized TF-IDF centroid similarity.
+- Classifies transcripts across 5 threat taxonomies: `DIGITAL_ARREST`, `BANKING_FRAUD`, `FAMILY_EMERGENCY`, `PARCEL_SCAM`, and `BENIGN`.
+- Extracts and highlights forensic evidence phrase spans across **English, Hindi, Telugu, and Tamil**.
+- Seamlessly augments the existing keyword scanner via `LayeredIntentScanner` in `backend/app/nlp/urgency_keywords.py`.
+
+### 3. Trusted Contact Alert & Bank Webhook Defense
+- **Trusted Contact Alert (`POST /v1/alert/trusted-contact`)**: When risk verdict reaches `High` or `Critical`, an out-of-band notification payload is generated for a designated family contact (mock WhatsApp-style notification, clearly labelled `SIMULATED DEMO`).
+- **Bank-Side Webhook Consumer (`POST /v1/alert/bank-webhook` & `/v1/alert/bank-webhook/demo`)**: Simulates a banking fraud operations center placing high-risk financial transfers on immediate administrative hold (`TRANSACTION_HELD`), with customer callback instructions.
+- **Dedicated Frontend Portal (`BankWebhookPage.jsx`)**: Interactive UI tab allowing security analysts to inspect held transactions, view webhook schemas, and trigger simulated bank payloads.
+
+---
+
+## 14. Tested Performance & Verification
+
+- **Total Test Suite**: **111/111 unit and integration tests passing (100%)** across `backend/tests/`:
+  - 30 Phase 5 metadata reputation, layered intent classifier, and alert tests in `test_metadata_signals.py`
   - 5 Two-stage cascade & fail-open tests in `test_cascade.py`
   - 4 Distributed session store tests in `test_session_store.py`
   - 2 Prometheus metrics & `/v1/scale` tests in `test_metrics_and_scale.py`
@@ -433,6 +466,6 @@ Standard Prometheus text exposition format ready for Prometheus / Grafana scrapi
   - 7 Red-team attack & burst mitigation tests in `test_redteam.py`
   - 7 Benchmark & baseline EER tests in `test_api.py`
   - 50 Comprehensive core acoustic, NLP, forensic, and security tests
-- **Frontend Bundle**: Vite production build compiled with 0 errors (`ScalePage.jsx`, `BenchmarksPage.jsx`, `RedTeamLab.jsx`, `LiveCallDemo.jsx`).
+- **Frontend Bundle**: Vite production build compiled with 0 errors (`ScalePage.jsx`, `BankWebhookPage.jsx`, `BenchmarksPage.jsx`, `RedTeamLab.jsx`, `LiveCallDemo.jsx`).
 - **Zero Raw Audio Persisted**: All streaming chunks, cascade features, and challenge samples are processed in memory and released immediately.
 

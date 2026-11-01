@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "description": "SIMULATED DEMO — Synthetic blocklist for demonstration only. Not a real scam database. Numbers are fictional.",
+  "source": "Demo: SIH TrustCall Project (generated 2024)",
+  "voip_prefixes": ["1646", "1347", "1929", "1212", "1718", "91140", "9161", "91180", "91720"],
+  "entries": [
+    {"number": "+918800012345", "category": "Digital Arrest Scam", "reports": 47, "last_seen": "2024-09-12"},
+    {"number": "+917700123456", "category": "Bank Impersonation (SBI/HDFC)", "reports": 31, "last_seen": "2024-09-08"},
+    {"number": "+919900234567", "category": "KYC Fraud / OTP Theft", "reports": 22, "last_seen": "2024-09-14"},
+    {"number": "+916600345678", "category": "Parcel / Narcotics Scam", "reports": 18, "last_seen": "2024-09-10"},
+    {"number": "+918899445566", "category": "CBI / ED Impersonation", "reports": 39, "last_seen": "2024-09-11"},
+    {"number": "+911234567890", "category": "Family Emergency Extortion", "reports": 12, "last_seen": "2024-09-07"},
+    {"number": "+919876000001", "category": "Investment / Job Fraud", "reports": 9, "last_seen": "2024-09-06"},
+    {"number": "+916789012345", "category": "Digital Arrest Scam", "reports": 55, "last_seen": "2024-09-15"},
+    {"number": "+917890123456", "category": "Telecom Disconnection Threat", "reports": 14, "last_seen": "2024-09-13"},
+    {"number": "+918901234567", "category": "OTP / Remote Access Scam", "reports": 27, "last_seen": "2024-09-09"}
+  ]
+}

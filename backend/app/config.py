@@ -51,6 +51,32 @@ class Settings(BaseSettings):
     SESSION_STORE_BACKEND: str = "memory"       # "memory" | "redis"
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Phase 5: Metadata Signal Sub-Weights (must sum to 1.0 within the metadata component)
+    META_WEIGHT_NUMBER_REPUTATION: float = 0.35   # Blocklist hit
+    META_WEIGHT_CALL_BURST_VELOCITY: float = 0.25  # Calls-per-window burst
+    META_WEIGHT_SHORT_REPEAT_CALLS: float = 0.20   # Repeated very short calls
+    META_WEIGHT_VOIP_PREFIX: float = 0.20           # VoIP gateway prefix detection
+
+    # Phase 5: Velocity / burst thresholds
+    CALL_BURST_WINDOW_SEC: int = 300             # 5-minute rolling window
+    CALL_BURST_THRESHOLD: int = 4                # >4 calls in window = burst
+    SHORT_CALL_THRESHOLD_SEC: int = 15           # Calls under 15 s = short
+
+    # Phase 5: Known VoIP prefixes (US + Indian non-geo ranges for demo)
+    VOIP_PREFIXES: list = [
+        "1646", "1347", "1929", "1212", "1718",
+        "91140", "9161", "91180", "91720",
+    ]
+
+    # Phase 5: Intent Classifier
+    INTENT_CLASSIFIER_ENABLED: bool = True
+    INTENT_CLASSIFIER_THRESHOLD: float = 0.10   # min cosine similarity to flag
+
+    # Phase 5: Trusted Contact Alert (mock / SIMULATED DEMO)
+    TRUSTED_CONTACT_MOCK_NUMBER: str = "+91 9876543210"
+    TRUSTED_CONTACT_MOCK_NAME: str = "Family Contact (Demo)"
+    BANK_WEBHOOK_DEMO_HOLD_AMOUNT: str = "₹50,000"
+
     model_config = SettingsConfigDict(env_prefix="TRUSTCALL_")
 
 settings = Settings()

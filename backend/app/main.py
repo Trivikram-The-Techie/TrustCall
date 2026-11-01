@@ -18,6 +18,7 @@ from app.api.routes_redteam import router as redteam_router
 from app.api.routes_challenge import router as challenge_router
 from app.api.routes_metrics import router as metrics_router
 from app.api.routes_scale import router as scale_router
+from app.api.routes_trusted_alert import router as trusted_alert_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -57,6 +58,7 @@ app.include_router(redteam_router)
 app.include_router(challenge_router)
 app.include_router(metrics_router)
 app.include_router(scale_router)
+app.include_router(trusted_alert_router)
 
 @app.get("/")
 async def root():

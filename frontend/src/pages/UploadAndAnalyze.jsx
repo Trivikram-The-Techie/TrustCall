@@ -183,6 +183,42 @@ export default function UploadAndAnalyze() {
                 placeholder="e.g., Transfer money now to avoid arrest, share your OTP code..."
                 className="w-full bg-[#080C15] border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono"
               />
+              {/* Regional Multilingual Quick Samples (Phase 5) */}
+              <div className="mt-2">
+                <span className="text-[10px] font-mono text-slate-400 block mb-1">
+                  Load Regional Scam Sample (Hindi / Telugu / Tamil / English):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setTranscript("Aapka bank khata block ho gaya hai. Turant OTP batao aur UPI pin share karo nahi to jail jana padega.")}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    Hindi (KYC/OTP)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTranscript("Meeru digital arrest lo unnaru. CBI officer crime branch. Dabbu pampandi account block aindi.")}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-indigo-300 border border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    Telugu (Digital Arrest)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTranscript("Ungalukku digital arrest. CBI officer arrest pannuvom. Account block aagiruku panam anupunga.")}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-rose-300 border border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    Tamil (Extortion)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTranscript("You are under digital arrest. Crime branch investigation. Transfer funds immediately or arrest warrant will be issued.")}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-cyan-300 border border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    English (CBI/Warrant)
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -233,7 +269,38 @@ export default function UploadAndAnalyze() {
                 explanation={result.explanation}
                 forensicReasons={result.forensic_reasons}
                 actionRecommendation={result.action_recommendation}
+                metaSubSignals={result.meta_sub_signals}
               />
+
+              {/* Multilingual Intent & Forensic Evidence Phrases (Phase 5) */}
+              {result.nlp_result && result.nlp_result.intent_class && result.nlp_result.intent_class !== 'BENIGN' && (
+                <div className="bg-[#111827] border border-amber-500/40 p-4 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
+                      Threat Intent: {result.nlp_result.intent_class} ({((result.nlp_result.intent_confidence || 0) * 100).toFixed(0)}% confidence)
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Layered Intent NLP
+                    </span>
+                  </div>
+                  {result.nlp_result.evidence_phrases && result.nlp_result.evidence_phrases.length > 0 && (
+                    <div>
+                      <span className="text-[10px] font-mono text-slate-400 block mb-1">Highlighted Evidence Phrases:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.nlp_result.evidence_phrases.map((ep, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 bg-rose-950/70 text-rose-300 border border-rose-800 text-[11px] font-mono rounded-lg"
+                            title={`Language: ${ep.language}`}
+                          >
+                            "{ep.text}"
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {result.vocoder_fingerprint && (
                 <VocoderFingerprintCard fingerprint={result.vocoder_fingerprint} />

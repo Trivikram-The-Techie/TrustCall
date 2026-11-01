@@ -49,15 +49,29 @@ class RiskFusionEngine:
         nlp_score = nlp_result.get("urgency_score", 0.0)
         
         # 5. Caller Metadata Risk [0.0 - 1.0]
+        # Phase 5: prefer the richer number_reputation aggregate when present
         meta_score = 0.0
+        meta_sub_signals: Dict[str, Any] = {}
         if caller_metadata:
-            if caller_metadata.get("is_unknown_number", False):
-                meta_score += 0.4
-            if caller_metadata.get("is_voip_spoofed", False):
-                meta_score += 0.5
-            if caller_metadata.get("country_mismatch", False):
-                meta_score += 0.3
-            meta_score = min(1.0, meta_score)
+            # Phase 5 NumberReputationEngine produces meta_aggregate_score
+            if "meta_aggregate_score" in caller_metadata:
+                meta_score = caller_metadata["meta_aggregate_score"]
+            else:
+                # Legacy path: simple flag-based scoring
+                if caller_metadata.get("is_unknown_number", False):
+                    meta_score += 0.4
+                if caller_metadata.get("is_voip_spoofed", False):
+                    meta_score += 0.5
+                if caller_metadata.get("country_mismatch", False):
+                    meta_score += 0.3
+                meta_score = min(1.0, meta_score)
+
+            meta_sub_signals = {
+                "number_reputation": caller_metadata.get("number_reputation", {}),
+                "call_burst_velocity": caller_metadata.get("call_burst_velocity", {}),
+                "short_repeat_calls": caller_metadata.get("short_repeat_calls", {}),
+                "voip_prefix": caller_metadata.get("voip_prefix", {}),
+            }
 
         # Weighted Linear Fusion
         raw_weighted_sum = (
@@ -154,7 +168,26 @@ class RiskFusionEngine:
             reasons.append(f"High-risk financial coercion/urgency keywords detected{phrases_str}")
             
         if meta_score >= 0.40:
-            reasons.append("Suspicious caller metadata (unknown or VoIP routed line)")
+            # Phase 5: detailed metadata sub-signal reasons
+            rep = meta_sub_signals.get("number_reputation", {}) if caller_metadata else {}
+            voip_pfx = meta_sub_signals.get("voip_prefix", {}) if caller_metadata else {}
+            burst = meta_sub_signals.get("call_burst_velocity", {}) if caller_metadata else {}
+            short_rep = meta_sub_signals.get("short_repeat_calls", {}) if caller_metadata else {}
+
+            if rep.get("listed"):
+                cat = rep.get("category", "Unknown")
+                cnt = rep.get("reports", 0)
+                reasons.append(f"Number on blocklist: {cat} ({cnt} reports) [SIMULATED DEMO]")
+            if voip_pfx.get("is_voip"):
+                reasons.append(f"VoIP gateway prefix detected ({voip_pfx.get('matched_prefix', '')})")
+            if burst.get("call_count_in_window", 0) >= settings.CALL_BURST_THRESHOLD:
+                reasons.append(f"Call burst: {burst['call_count_in_window']} calls in {settings.CALL_BURST_WINDOW_SEC}s window")
+            if short_rep.get("short_call_count", 0) > 1:
+                reasons.append(f"Repeated short calls: {short_rep['short_call_count']} calls <{settings.SHORT_CALL_THRESHOLD_SEC}s")
+            if not any([rep.get("listed"), voip_pfx.get("is_voip"),
+                        burst.get("call_count_in_window", 0) >= settings.CALL_BURST_THRESHOLD,
+                        short_rep.get("short_call_count", 0) > 1]):
+                reasons.append("Suspicious caller metadata (unknown or VoIP routed line)")
 
         if not reasons:
             reasons.append("Natural human prosody, organic pitch variations, and authentic vocal tract tremor")
@@ -189,7 +222,8 @@ class RiskFusionEngine:
             "forensic_reasons": reasons,
             "components": components,
             "contributions": component_contributions,
-            "layers": layers
+            "layers": layers,
+            "meta_sub_signals": meta_sub_signals,  # Phase 5: per-signal metadata breakdown
         }
 
 def np_clip(val: float, low: float, high: float) -> float:

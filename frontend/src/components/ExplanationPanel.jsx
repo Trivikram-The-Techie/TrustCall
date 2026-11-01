@@ -1,12 +1,13 @@
 import React from 'react';
-import { Cpu, Activity, MessageSquareWarning, PhoneCall, CheckCircle2, AlertTriangle, Layers, Fingerprint } from 'lucide-react';
+import { Cpu, Activity, MessageSquareWarning, PhoneCall, CheckCircle2, AlertTriangle, Layers, Fingerprint, DatabaseZap, Zap, Clock, Radio } from 'lucide-react';
 
 export default function ExplanationPanel({ 
   components = {}, 
   explanation = "Awaiting call stream...", 
   forensicReasons = [],
   actionRecommendation = "Monitoring in progress",
-  riskScore = 14
+  riskScore = 14,
+  metaSubSignals = {}
 }) {
   const modelConf = components.model_confidence || 0;
   const spectralDisc = components.spectral_discontinuity || 0;
@@ -63,6 +64,60 @@ export default function ExplanationPanel({
     return 'bg-emerald-600';
   };
 
+  // Phase 5: metadata sub-signals
+  const numRep = metaSubSignals?.number_reputation || {};
+  const callBurst = metaSubSignals?.call_burst_velocity || {};
+  const shortRep = metaSubSignals?.short_repeat_calls || {};
+  const voipPfx = metaSubSignals?.voip_prefix || {};
+  const hasSubSignals = Object.keys(metaSubSignals || {}).length > 0;
+
+  const metaSubItems = [
+    {
+      key: 'reputation',
+      label: 'Number Reputation',
+      icon: DatabaseZap,
+      score: numRep.listed ? numRep.score * 100 : 0,
+      detail: numRep.listed
+        ? `Blocklisted: ${numRep.category} (${numRep.reports} reports)`
+        : 'Not on blocklist',
+      contribution: numRep.contribution || 0,
+      flag: numRep.listed,
+    },
+    {
+      key: 'burst',
+      label: 'Call Burst Velocity',
+      icon: Zap,
+      score: (callBurst.score || 0) * 100,
+      detail: callBurst.call_count_in_window != null
+        ? `${callBurst.call_count_in_window} calls in window`
+        : 'No burst detected',
+      contribution: callBurst.contribution || 0,
+      flag: (callBurst.score || 0) > 0.3,
+    },
+    {
+      key: 'short',
+      label: 'Short Repeat Calls',
+      icon: Clock,
+      score: (shortRep.score || 0) * 100,
+      detail: shortRep.short_call_count != null
+        ? `${shortRep.short_call_count} short calls (<15s)`
+        : 'None detected',
+      contribution: shortRep.contribution || 0,
+      flag: (shortRep.short_call_count || 0) > 1,
+    },
+    {
+      key: 'voip',
+      label: 'VoIP Prefix',
+      icon: Radio,
+      score: (voipPfx.score || 0) * 100,
+      detail: voipPfx.is_voip
+        ? `VoIP prefix: ${voipPfx.matched_prefix}`
+        : 'Legitimate carrier',
+      contribution: voipPfx.contribution || 0,
+      flag: voipPfx.is_voip,
+    },
+  ];
+
   return (
     <div className="glass-card rounded-2xl p-5 shadow-sm border border-[#E6E0D2] flex flex-col justify-between">
       <div>
@@ -105,6 +160,36 @@ export default function ExplanationPanel({
                   />
                 </div>
                 <p className="text-[10px] text-[#78716C] mt-1">{f.desc}</p>
+
+                {/* Phase 5: Inline metadata sub-signal breakdown under the meta bar */}
+                {f.id === 'meta' && hasSubSignals && (
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    {metaSubItems.map((sub) => {
+                      const SubIcon = sub.icon;
+                      return (
+                        <div
+                          key={sub.key}
+                          className={`p-1.5 rounded-lg border text-[10px] ${
+                            sub.flag
+                              ? 'bg-rose-50 border-rose-200'
+                              : 'bg-[#F5F2EB] border-[#E0D9CC]'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1 mb-0.5">
+                            <SubIcon className={`w-2.5 h-2.5 ${sub.flag ? 'text-rose-600' : 'text-[#78716C]'}`} />
+                            <span className={`font-bold font-mono ${sub.flag ? 'text-rose-800' : 'text-[#1C1917]'}`}>
+                              {sub.label}
+                            </span>
+                          </div>
+                          <p className="text-[#57534E] leading-tight">{sub.detail}</p>
+                          <p className="font-mono text-[#78716C] mt-0.5">
+                            contribution: {sub.contribution.toFixed(1)}pts
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

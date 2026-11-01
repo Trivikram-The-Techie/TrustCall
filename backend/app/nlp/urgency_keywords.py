@@ -158,3 +158,74 @@ class UrgencyKeywordScanner:
 
 # Global singleton scanner
 urgency_scanner = UrgencyKeywordScanner()
+
+
+# --------------------------------------------------------------------------- #
+#  Phase 5: Layered Intent Scanner (keyword + intent classifier fusion)
+# --------------------------------------------------------------------------- #
+
+class LayeredIntentScanner:
+    """
+    Wraps UrgencyKeywordScanner with the local intent classifier.
+    Returns the merged result including evidence phrase positions.
+    Backward-compatible: still exposes urgency_score, matched_phrases, etc.
+    """
+
+    def __init__(self):
+        self._keyword_scanner = UrgencyKeywordScanner()
+        self._classifier_enabled = True
+        self._intent_classifier = None  # lazy import to avoid circular deps
+
+    def _get_classifier(self):
+        if self._intent_classifier is None:
+            try:
+                from app.nlp.intent_classifier import intent_classifier
+                self._intent_classifier = intent_classifier
+            except Exception:
+                self._classifier_enabled = False
+        return self._intent_classifier
+
+    def scan_text(self, text: str) -> Dict[str, Any]:
+        """
+        Combines keyword scan + intent classification.
+        Result is a superset of UrgencyKeywordScanner.scan_text().
+        """
+        kw_result = self._keyword_scanner.scan_text(text)
+
+        clf_result = {"intent_class": "BENIGN", "confidence": 0.0, "evidence_phrases": [], "all_scores": {}}
+        classifier = self._get_classifier()
+        if classifier and self._classifier_enabled:
+            try:
+                clf_result = classifier.classify(text)
+            except Exception:
+                pass
+
+        # Merge: urgency_score is max of keyword hit and classifier signal
+        kw_score = kw_result["urgency_score"]
+        intent = clf_result["intent_class"]
+
+        # Boost urgency when classifier fires a scam intent
+        intent_boost = 0.0
+        if intent != "BENIGN":
+            conf = clf_result["confidence"]
+            intent_boost = min(0.35, conf * 0.40)  # max +0.35 boost
+
+        merged_score = round(min(1.0, kw_score + intent_boost), 3)
+
+        return {
+            # core backward-compat keys
+            "urgency_score": merged_score,
+            "detected": merged_score > 0.05 or kw_result["detected"],
+            "categories": kw_result["categories"],
+            "matched_phrases": kw_result["matched_phrases"],
+            "explanation": kw_result["explanation"],
+            # Phase 5 extras
+            "intent_class": intent,
+            "intent_confidence": round(clf_result["confidence"], 4),
+            "evidence_phrases": clf_result["evidence_phrases"],
+            "all_intent_scores": clf_result.get("all_scores", {}),
+        }
+
+
+# Global layered scanner singleton (use this in routes / risk engine for Phase 5)
+layered_scanner = LayeredIntentScanner()
